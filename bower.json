@@ -1,0 +1,10 @@
+{
+  "name": "cg2017",
+  "version": "0.1",
+  "author": "Bonsai",
+  "dependencies": {
+    "twgl.js": "latest",
+    "three.js": "latest",
+    "tweenjs": "latest",
+  }
+}
