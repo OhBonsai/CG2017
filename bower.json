@@ -5,6 +5,6 @@
   "dependencies": {
     "twgl.js": "latest",
     "three.js": "latest",
-    "tweenjs": "latest",
+    "tweenjs": "latest"
   }
 }
