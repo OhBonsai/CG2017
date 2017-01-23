@@ -61,36 +61,37 @@ from functools import reduce
 # uvec4 hanzi_top = [0x01000100, 0x01200510, 0x19000970, 0x0f903890]
 # uvec4 hanzi_bottom = [0x0aa00c40, 0x38c0cb24, 0x1814080c, 0x00040000]
 
+def generate_lattice(code, f_stream):
+    area_code = int(str(code)[0:2])
+    index_code = int(str(code)[2:])
+    off = (94 * (area_code - 1) + (index_code - 1)) * 32
 
-han_zi = '我'
-PER_SIZE = 16
+    f_stream.seek(off)
+    cur_blob = f_stream.read(32)
+    lattice = []
+
+    for i in range(0, 32, 4):
+        bit32 = cur_blob[i: i+4]
+        if bit32 == b'':
+            continue
+        int_v = reduce(lambda x, y: x << 8 | y, bit32)
+        str_v = str(hex(int_v))
+        attach_0_str = ''
+        for j in range(10 - len(str_v)):
+            attach_0_str += '0'
+        str_v = str_v[:2] + attach_0_str + str_v[2:]
+        # int_v = int(str_v, 16)
+        lattice.append(str_v)
+
+    return lattice
+
+
 code_dict = json.load(open('code.json', 'r'))
-code = code_dict[han_zi]
-
-area_code = int(str(code)[0:2])
-index_code = int(str(code)[2:])
-off = (94 * (area_code - 1) + (index_code - 1)) * int(PER_SIZE * PER_SIZE / 8)
-
+result = {}
 with open('hzk16k', 'rb') as f:
-    f.seek(off)
-    han_zi_blob = f.read(int(PER_SIZE * PER_SIZE / 8))
+    for k in code_dict:
+        result[k] = generate_lattice(code_dict[k], f)
 
-for i in range(0, 32, 4):
-    t = han_zi_blob[i:i + 4]
-    if t == b'':
-        continue
-    v = reduce(lambda x, y: x << 8 | y, t)
-    print((hex(v)))
+print(result['爱'])
 
 
-for i in range(0, PER_SIZE * PER_SIZE, int(PER_SIZE / 8)):
-    t = han_zi_blob[i:i + int(PER_SIZE / 8)]
-    if t == b'':
-        continue
-    v = reduce(lambda x, y: x << 8 | y, t)
-    for j in range(PER_SIZE-1, -1, -1):
-        if v >> j & 1:
-            sys.stdout.write('■ ')
-        else:
-            sys.stdout.write('□ ')
-    print()
