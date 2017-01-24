@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<!--COPY FORM https://threejs.org/examples/#css3d_sprites-->
+<html>
+<head>
+    <title>来一发汉字</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+        html, body {
+            height: 100%;
+        }
+        body {
+            background-color: #ffffff;
+            margin: 0;
+            font-family: Arial;
+            overflow: hidden;
+        }
+        a {
+            color: #8888ff;
+        }
+        #info {
+            position: absolute;
+            width: 100%;
+            color: #000000;
+            padding: 5px;
+            font-family: Monospace;
+            font-size: 13px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+<!--<script src="../../lib/three.js/three.min.js"></script>-->
+<script src="https://threejs.org/build/three.js"></script>
+<script src="https://threejs.org/examples/js/renderers/CSS3DRenderer.js"></script>
+<script src="lattice.js"></script>
+
+<div id="container"></div>
+<div id="info"><input id='str' placeholder="输入汉字"></div>
+
+<script>
+    var camera, scene, renderer;
+    var basicObj;
+    var imgNode;
+    var targetPositions = [];
+    var objects = [];
+    init();
+    animate();
+
+
+    function init() {
+        camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 100000 );
+        camera.position.set( 0, 0, 3000 );
+        camera.lookAt( new THREE.Vector3() );
+        scene = new THREE.Scene();
+        var image = document.createElement( 'img' );
+        image.addEventListener( 'load', function ( event ) {
+            imgNode = image;
+        }, false );
+        image.src = 'sprite.png';
+
+
+        renderer = new THREE.CSS3DRenderer();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        renderer.domElement.style.position = 'absolute';
+        document.getElementById( 'container' ).appendChild( renderer.domElement );
+        window.addEventListener( 'resize', onWindowResize, false );
+        window.onkeydown = onInputEnter;
+    }
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+    }
+
+    function onInputEnter(event){
+        if(event.keyCode == 13){
+            createTargetPosition();
+            createSprite();
+            targetPositions.forEach(function(o,idx){
+                objects[idx].position.x = o[0];
+                objects[idx].position.y = o[1];
+                objects[idx].position.z = 0;
+            })
+        }
+    }
+
+    function createSprite(){
+        objects.forEach(function(o){
+            scene.remove(o);
+        });
+        objects = [];
+        for(var i=0; i<=targetPositions.length; i++){
+            var o = new THREE.CSS3DSprite( imgNode.cloneNode());
+            objects.push(o);
+            scene.add(o)
+        }
+    }
+
+
+    function createTargetPosition(){
+        var chineseLetters = document.getElementById('str').value.trim().split('');
+        targetPositions = [];
+        var startX = -(72*16)* chineseLetters.length / 2;
+        var startY = 72*16/2;
+
+        chineseLetters.forEach(function(l, idxx){
+            var curX = startX + idxx*(72*16+200);
+            var curY = startY;
+            var curLattice = lattice[l];
+            curLattice.forEach(function(c, idx){
+                var h = parseInt(c.slice(0,6));
+                var b = parseInt('0x'+c.slice(6,10));
+                for(var i=15; i>=0; i--){
+                    if((h>>i&1) == 1){
+                        targetPositions.push([curX+ (15-i)*72, curY-idx*2*72, 0])
+                    }
+                    if((b>>i&1) == 1){
+                        targetPositions.push([curX+ (15-i)*72, curY-idx*2*72-72, 0])
+                    }
+                }
+            })
+        });
+    }
+
+    function animate() {
+        requestAnimationFrame( animate );
+        renderer.render( scene, camera );
+    }
+</script>
+</body>
+</html>
