@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>2D</title>
+    <title>2D-Sierpinski-Point</title>
     <script src="math.js"></script>
 </head>
 <body>
@@ -38,7 +38,7 @@ attribute vec4 vPos;
 
 void main(){
     gl_PointSize = 1.;
-    gl_Position = vPos;
+    gl_Position = vec4(vPos.xy, 0., 1.0);
 }
 
 `;
