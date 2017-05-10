@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>2D</title>
+    <script src="math.js"></script>
+</head>
+<body>
+    <div style="margin: 0 auto; width: 800px">
+    <canvas id="c" style=" border: 1px solid black; width: 800px; height: 800px"></canvas>
+    </div>
+
+<script>
+// Run in Ubuntu16.04 Chrome 58.0.3029.81 (Official Build) (64-bit)
+
+window.onload = function () {
+    draw();
+};
+
+
+const NUM_POINT = 1000;
+const FS = `
+#ifdef GL_ES
+precision highp float;
+#endif
+
+void main(){
+    gl_FragColor = vec4(1., 0., 0., 1.);
+}
+`;
+
+const VS = `
+#ifdef GL_ES
+precision highp float;
+#endif
+
+attribute vec4 vPos;
+
+void main(){
+    gl_PointSize = 1.0;
+    gl_Position = vPos;
+}
+
+`;
+
+function draw(){
+    let gl = document.getElementById('c').getContext('webgl');
+    if (!gl) alert('no webgl support');
+
+
+    let vertices = [
+        vec2(-1., -1.),
+        vec2( 0.,  1.),
+        vec2( 1., -1.)
+    ];
+
+    let u = add(vertices[0], vertices[1]);
+    let v = add(vertices[1], vertices[2]);
+    let p = scale(.25, add(u, v));
+
+    let points = [p];
+
+    for(let i=0; points.length<NUM_POINT; i++){
+        let j = Math.floor(Math.random()*3);
+        let p = add(points[i], vertices[j]);
+        p = scale(.5, p);
+        points.push(p);
+    }
+
+    // webgl init
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    gl.clearColor(1., 1., 1., 1.);
+
+    // shader
+    let vs = setupShader(gl, VS, gl.VERTEX_SHADER);
+    let fs = setupShader(gl, FS, gl.FRAGMENT_SHADER);
+    let program = setupProgram(gl, vs, fs);
+    if(!program) alert('can not init program');
+    gl.useProgram(program);
+
+    let posBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, fa(points), gl.STATIC_DRAW);
+
+    let vPos = gl.getAttribLocation(program, 'vPos');
+    gl.vertexAttribPointer(vPos, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(vPos);
+
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.POINTS, 0, points.length);
+}
+
+function setupProgram(gl, vs, fs){
+    if(!vs || !fs) alert('can not init shader');
+    let program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+
+    if(!gl.getProgramParameter(program, gl.LINK_STATUS)){
+        alert('program compile error');
+        return null
+    }else{
+        return program;
+    }
+}
+
+
+function setupShader(gl, source, type){
+    let shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+
+    if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS)){
+        alert('shader compile problem: '+ gl.getShaderInfoLog(shader));
+        return null
+    }else{
+        return shader
+    }
+}
+
+
+function fa(a){
+    let r = new Float32Array(a.length*a[0].length);
+    let idx =0;
+    for(let v of a){
+        for(let p of v){
+            r[idx++]=p
+        }
+    }
+    return r
+}
+
+</script>
+</body>
+</html>
