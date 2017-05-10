@@ -6,8 +6,8 @@
     <script src="math.js"></script>
 </head>
 <body>
-    <div style="margin: 0 auto; width: 800px">
-    <canvas id="c" style=" border: 1px solid black; width: 800px; height: 800px"></canvas>
+    <div style="margin: 0 auto; width: 512px">
+    <canvas id="c" style="margin-top: 30px; border: 1px solid black; width: 512px; height: 512px"></canvas>
     </div>
 
 <script>
@@ -18,7 +18,7 @@ window.onload = function () {
 };
 
 
-const NUM_POINT = 1000;
+const NUM_POINT = 10000;
 const FS = `
 #ifdef GL_ES
 precision highp float;
@@ -37,7 +37,7 @@ precision highp float;
 attribute vec4 vPos;
 
 void main(){
-    gl_PointSize = 1.0;
+    gl_PointSize = 1.;
     gl_Position = vPos;
 }
 
