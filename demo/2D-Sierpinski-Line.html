@@ -34,23 +34,22 @@ precision highp float;
 #endif
 
 void main(){
-    gl_FragColor = vec4(0., 0., 1., 0.);
+    gl_FragColor = vec4(0., 0., 1., 1.);
 }
 `;
 
 function draw() {
-    let ip = [
+    let vertices = [
         vec2(-1., -1.),
         vec2( 0.,  1.),
         vec2( 1., -1.)
     ];
 
-    let vertices = [];
-    divide(vertices, ip[0], ip[1], ip[2], TIME_DIVIDE);
+    let points = [];
+    divide(points, vertices[0], vertices[1], vertices[2], TIME_DIVIDE);
 
     let gl = document.getElementById('c').getContext('webgl');
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    gl.clearColor(1., 1., 1., 1.);
+
 
     let vs = initShader(gl, VS, gl.VERTEX_SHADER);
     let fs = initShader(gl, FS, gl.FRAGMENT_SHADER);
@@ -60,7 +59,7 @@ function draw() {
 
     let posBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices),gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(points),gl.STATIC_DRAW);
 
     let vPos = gl.getAttribLocation(program, 'vPos');
     console.log(vPos===0);
@@ -68,7 +67,9 @@ function draw() {
     gl.enableVertexAttribArray(vPos);
 
     gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.drawArrays(gl.TRIANGLES, 0, vertices.length);
+    gl.clearColor(1., 1., 1., 1.);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    gl.drawArrays(gl.TRIANGLES, 0, points.length);
 
 
 
@@ -89,9 +90,9 @@ function divide(p, a, b, c, time){
         let ac = mix(a, c, .5);
         let bc = mix(b, c, .5);
 
-        divide(p, a, ac, bc, time-1);
-        divide(p, b, ab, bc, time-1);
+        divide(p, a, ab, ac, time-1);
         divide(p, c, ac, bc, time-1);
+        divide(p, b, bc, ab, time-1);
     }
 }
 
