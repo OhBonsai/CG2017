@@ -7,14 +7,16 @@
     <script src="math.js"></script>
 </head>
 <body>
-    <div style="margin: 0 auto; width: 512px">
-        <canvas id="c" style="border: 1px solid black; width: 512px; height: 512px; margin-top: 30px"></canvas>
-    </div>
+<div style="margin: 0 auto; width: 512px">
+    <canvas id="c" style="border: 1px solid black; width: 512px; height: 512px; margin-top: 30px"></canvas>
+</div>
 
 <script>
-window.onload = function(){draw()};
+    window.onload = function () {
+        draw()
+    };
 
-const VS =`
+const VS = `
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -27,18 +29,17 @@ uniform mat4 uProjection;
 uniform mat4 uNormal;
 uniform vec3 uLight;
 
-
 varying float dotProduct;
 
-void main(){
+void main(void) {
+    gl_Position = uProjection * uModel * vec4(vPos, 1.0);
     vec4 transformedNormal = uNormal * vec4(vNor, 1.0);
     dotProduct = max(dot(transformedNormal.xyz, uLight), 0.0);
-    gl_Position = uProjection*uModel*vec4(vPos, 1.);
 }
 
 `;
 
-const FS =`
+    const FS = `
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -53,180 +54,208 @@ void main(){
 }
 `;
 
-const DIVIDE_TIME = 3;
+    const DIVIDE_TIME = 3;
 
-let modelViewMatrix = new Matrix4x4();
-let projectionMatrix = new Matrix4x4();
-let viewerLocation = { x: 0.0, y: 0, z: 20.0 };
-let rotationAroundX = 0.0;
-let rotationAroundY = -90.0;
-let gl;
-let vertices = [];
-let normals = [];
+    let modelViewMatrix = new Matrix4x4();
+    let projectionMatrix = new Matrix4x4();
+    let viewerLocation = {x: 0.0, y: 0, z: 20.0};
+    let rotationAroundX = 0.0;
+    let rotationAroundY = -90.0;
+    let gl;
+    let vertices = [];
+    let normals = [];
 
-function draw(){
-    divide(vertices, normals, [ 0.0, 3.0 * Math.sqrt(6), 0.0 ],
-        [ -2.0 * Math.sqrt(3), -Math.sqrt(6), -6.0],
-        [ -2.0 * Math.sqrt(3), -Math.sqrt(6), 6.0 ],
-        [ 4.0 * Math.sqrt(3), -Math.sqrt(6), 0.0 ],
-        DIVIDE_TIME);
+    let uModel, uProjection, uNormal;
 
-    gl = document.getElementById('c').getContext('webgl');
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    gl.enable(gl.DEPTH_TEST);
-    gl.clearColor(1., 1., 1., 1.);
+    function draw() {
+        divideTetrahedron(vertices, normals, [0.0, 3.0 * Math.sqrt(6), 0.0],
+            [-2.0 * Math.sqrt(3), -Math.sqrt(6), -6.0],
+            [-2.0 * Math.sqrt(3), -Math.sqrt(6), 6.0],
+            [4.0 * Math.sqrt(3), -Math.sqrt(6), 0.0],
+            DIVIDE_TIME);
 
-    let vs = initShader(VS, gl.VERTEX_SHADER);
-    let fs = initShader(FS, gl.FRAGMENT_SHADER);
-    let program = initProgram(vs, fs);
-    gl.useProgram(program);
+        gl = document.getElementById('c').getContext('webgl');
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        gl.enable(gl.DEPTH_TEST);
+        gl.clearColor(1., 1., 1., 1.);
 
-    let vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        let vs = initShader(VS, gl.VERTEX_SHADER);
+        let fs = initShader(FS, gl.FRAGMENT_SHADER);
+        let program = initProgram(vs, fs);
+        gl.useProgram(program);
 
-    let normalBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
-
-
-    let vPos = gl.getAttribLocation(program, 'vPos');
-    gl.enableVertexAttribArray(vPos);
-    let vNor = gl.getAttribLocation(program, 'vNor');
-    gl.enableVertexAttribArray(vNor);
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.vertexAttribPointer(vPos, 3, gl.FLOAT, false, 0, 0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-    gl.vertexAttribPointer(vNor, 3, gl.FLOAT, false, 0, 0);
-
-    // one time light
-    let uLight = gl.getUniformLocation(program, 'uLight');
-    gl.uniform3fv(uLight, new Float32Array([0., 1., 1.]));
-
-    let uModel = gl.getUniformLocation(program, 'uModel');
-    let uProjection = gl.getUniformLocation(program, 'uProjection');
-    let uNormal = gl.getUniformLocation(program, 'uNormal');
-
-    drawScene(uModel, uProjection, uNormal);
-    console.log(vertices);
-    console.log(normals);
-}
-
-function drawScene(m, p, n){
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    projectionMatrix.loadIdentity();
-    projectionMatrix.perspective(45, gl.canvas.width/gl.canvas.height, 11.0, 100.);
-
-    modelViewMatrix.loadIdentity();
-    modelViewMatrix.translate(-viewerLocation.x, -viewerLocation.y, -viewerLocation.z);
-    modelViewMatrix.rotate(rotationAroundX, 1.0, 0.0, 0.0);
-    modelViewMatrix.rotate(rotationAroundY, 0.,  1.,  0.);
-
-    let normalMatrix = modelViewMatrix.copy();
-    normalMatrix.invert();
-    normalMatrix.transpose();
-
-    gl.uniformMatrix4fv(n, false, new Float32Array(normalMatrix.elements));
-    gl.uniformMatrix4fv(m, false, new Float32Array(modelViewMatrix.elements));
-    gl.uniformMatrix4fv(p, false, new Float32Array(projectionMatrix.elements));
-
-    gl.drawArrays(gl.TRIANGLES, 0, vertices.length/3);
-
-    gl.flush();
-}
+        let vertexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        let vPos = gl.getAttribLocation(program, 'vPos');
+        gl.enableVertexAttribArray(vPos);
+        gl.vertexAttribPointer(vPos, 3, gl.FLOAT, false, 0, 0);
 
 
-function initShader(source, type){
-    let s = gl.createShader(type);
-    gl.shaderSource(s, source);
-    gl.compileShader(s);
+        let normalBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+        let vNor = gl.getAttribLocation(program, 'vNor');
+        gl.enableVertexAttribArray(vNor);
+        gl.vertexAttribPointer(vNor, 3, gl.FLOAT, false, 0, 0);
 
-    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){
-        alert('compile shader error: ' + gl.getShaderInfoLog(s));
-        return null
-    }else{
-        return s
-    }
-}
+        // one time light
+        let uLight = gl.getUniformLocation(program, 'uLight');
+        gl.uniform3fv(uLight, new Float32Array([0., 1., 1.]));
 
+        uModel = gl.getUniformLocation(program, 'uModel');
+        uProjection = gl.getUniformLocation(program, 'uProjection');
+        uNormal = gl.getUniformLocation(program, 'uNormal');
 
-function initProgram(vs, fs){
-    let p = gl.createProgram();
-    gl.attachShader(p, vs);
-    gl.attachShader(p, fs);
-    gl.linkProgram(p);
-
-    if(!gl.getProgramParameter(p, gl.LINK_STATUS)){
-        alert('compile program error: ' + gl.getProgramInfoLog(p));
-        return null
-    }else{
-        return p
-    }
-}
-
-
-function divide(v,n, a, b, c, d, time){
-    if (time===0){
-        let n1 = normalize(crossProduct(a, b, c));
-        let n2 = normalize(crossProduct(a, c, d));
-        let n3 = normalize(crossProduct(a, d, b));
-        let n4 = normalize(crossProduct(d, c, b));
-        let addN = [].concat(n1, n1, n1, n2, n2, n2, n3, n3, n3, n4, n4, n4);
-        let addV = [].concat(a, b, c, a, c, d, a, d, b, d, c, b);
-
-        n.push(...addN);
-        v.push(...addV)
-
-
-    }else{
-        let ab = midpoint(a, b);
-        let bc = midpoint(b, c);
-        let ca = midpoint(c, a);
-        let da = midpoint(d, a);
-        let bd = midpoint(b, d);
-        let dc = midpoint(d, c);
-
-        divide(v, n, a, ab, ca, da, time-1);
-        divide(v, n, ab, b, bc, bd, time-1);
-        divide(v, n, ca, bc, c, dc, time-1);
-        divide(v, n, da, bd, dc, d, time-1);
+        drawScene(uModel, uProjection, uNormal);
     }
 
-};
+    function drawScene(m, p, n) {
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        projectionMatrix.loadIdentity();
+        projectionMatrix.perspective(45, gl.canvas.width / gl.canvas.height, 11.0, 100.);
+
+        modelViewMatrix.loadIdentity();
+        modelViewMatrix.translate(-viewerLocation.x, -viewerLocation.y, -viewerLocation.z);
+        modelViewMatrix.rotate(rotationAroundX, 1.0, 0.0, 0.0);
+        modelViewMatrix.rotate(rotationAroundY, 0., 1., 0.);
+
+        let normalMatrix = modelViewMatrix.copy();
+        normalMatrix.invert();
+        normalMatrix.transpose();
+
+        gl.uniformMatrix4fv(n, false, new Float32Array(normalMatrix.elements));
+        gl.uniformMatrix4fv(m, false, new Float32Array(modelViewMatrix.elements));
+        gl.uniformMatrix4fv(p, false, new Float32Array(projectionMatrix.elements));
+
+        gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 3);
+
+        gl.flush();
+    }
 
 
+    function initShader(source, type) {
+        let s = gl.createShader(type);
+        gl.shaderSource(s, source);
+        gl.compileShader(s);
 
-function midpoint(point1, point2) {
-    return [(point1[0] + point2[0]) / 2,
-        (point1[1] + point2[1]) / 2,
-        (point1[2] + point2[2]) / 2];
-}
-
-function vector(point1, point2) {
-    return [ point2[0] - point1[0], point2[1] - point1[1], point2[2] - point1[2] ];
-}
-
-
-function crossProduct(point1, point2, point3) {
-    let vector1 = vector(point1, point2),
-        vector2 = vector(point1, point3);
-    return [((vector1[1] * vector2[2]) - (vector2[1] * vector1[2])),
-        ((vector1[2] * vector2[0]) - (vector2[2] * vector1[0])),
-        ((vector1[0] * vector2[1]) - (vector2[0] * vector1[1]))];
-}
-
-/*
- * This function normalizes a 3D vector.
- */
-function normalize (vector) {
-    let length = Math.sqrt((vector[0] * vector[0]) +
-        (vector[1] * vector[1]) + (vector[2] * vector[2]));
-    return [ vector[0] / length, vector[1] / length, vector[2] / length ];
-}
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+            alert('compile shader error: ' + gl.getShaderInfoLog(s));
+            return null
+        } else {
+            return s
+        }
+    }
 
 
+    function initProgram(vs, fs) {
+        let p = gl.createProgram();
+        gl.attachShader(p, vs);
+        gl.attachShader(p, fs);
+        gl.linkProgram(p);
+
+        if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+            alert('compile program error: ' + gl.getProgramInfoLog(p));
+            return null
+        } else {
+            return p
+        }
+    }
+
+
+    function midpoint(point1, point2) {
+        return [(point1[0] + point2[0]) / 2,
+            (point1[1] + point2[1]) / 2,
+            (point1[2] + point2[2]) / 2];
+    }
+
+    function vector(point1, point2) {
+        return [point2[0] - point1[0], point2[1] - point1[1], point2[2] - point1[2]];
+    }
+
+
+    function crossProduct(point1, point2, point3) {
+        let vector1 = vector(point1, point2),
+            vector2 = vector(point1, point3);
+        return [((vector1[1] * vector2[2]) - (vector2[1] * vector1[2])),
+            ((vector1[2] * vector2[0]) - (vector2[2] * vector1[0])),
+            ((vector1[0] * vector2[1]) - (vector2[0] * vector1[1]))];
+    }
+
+    /*
+     * This function normalizes a 3D vector.
+     */
+    function normalize(vector) {
+        let length = Math.sqrt((vector[0] * vector[0]) +
+            (vector[1] * vector[1]) + (vector[2] * vector[2]));
+        return [vector[0] / length, vector[1] / length, vector[2] / length];
+    }
+
+    cameraRotate = function (event) {
+        rotationAroundX = xRotationStart + yDragStart - event.clientY;
+        rotationAroundY = yRotationStart + xDragStart - event.clientX;
+        drawScene(uModel, uProjection, uNormal);
+    };
+
+    let canvas = document.getElementById('c');
+
+    canvas.onmousedown = function (event) {
+        xDragStart = event.clientX;
+        yDragStart = event.clientY;
+        xRotationStart = rotationAroundX;
+        yRotationStart = rotationAroundY;
+        canvas.onmousemove = cameraRotate;
+    };
+
+    canvas.onmouseup = function () {
+        canvas.onmousemove = null;
+    };
+
+
+    divideTetrahedron = function (gasket, normals, vertex1, vertex2, vertex3, vertex4, depth) {
+        let midpoint1, midpoint2, midpoint3, midpoint4, midpoint5, midpoint6,
+            normal1, normal2, normal3, normal4,
+            normalCoordinatesToAdd, coordinatesToAdd, i;
+
+        if (depth > 1) {
+            // Grab the 6 midpoints among the 4 vertices.
+            midpoint1 = midpoint(vertex1, vertex2);
+            midpoint2 = midpoint(vertex2, vertex3);
+            midpoint3 = midpoint(vertex3, vertex1);
+            midpoint4 = midpoint(vertex4, vertex1);
+            midpoint5 = midpoint(vertex2, vertex4);
+            midpoint6 = midpoint(vertex4, vertex3);
+
+            // Form the four subtetrahedrons and divide those up.
+            divideTetrahedron(gasket, normals, vertex1, midpoint1, midpoint3, midpoint4, depth - 1);
+            divideTetrahedron(gasket, normals, midpoint1, vertex2, midpoint2, midpoint5, depth - 1);
+            divideTetrahedron(gasket, normals, midpoint3, midpoint2, vertex3, midpoint6, depth - 1);
+            divideTetrahedron(gasket, normals, midpoint4, midpoint5, midpoint6, vertex4, depth - 1);
+        } else {
+            // Calculate the normal for each triangle.
+            normal1 = normalize(crossProduct(vertex1, vertex2, vertex3));
+            normal2 = normalize(crossProduct(vertex1, vertex3, vertex4));
+            normal3 = normalize(crossProduct(vertex1, vertex4, vertex2));
+            normal4 = normalize(crossProduct(vertex4, vertex3, vertex2));
+
+            // Build the normal and vertex arrays.
+            normalCoordinatesToAdd = [].concat(normal1, normal1, normal1,
+                normal2, normal2, normal2,
+                normal3, normal3, normal3,
+                normal4, normal4, normal4);
+            coordinatesToAdd = [].concat(vertex1, vertex2, vertex3,
+                vertex1, vertex3, vertex4,
+                vertex1, vertex4, vertex2,
+                vertex4, vertex3, vertex2);
+
+            // 12 three-element arrays equals 36 elements...
+            for (i = 0; i < 36; i += 1) {
+                gasket.push(coordinatesToAdd[i]);
+                normals.push(normalCoordinatesToAdd[i]);
+            }
+        }
+    };
 
 </script>
 
