@@ -75,16 +75,10 @@ function draw() {
 
 }
 
-function tri(p, a, b, c){
-    p.push(a);
-    p.push(b);
-    p.push(c);
-}
-
 
 function divide(p, a, b, c, time){
     if(time===0){
-        tri(p,a,b,c);
+        p.push(a, b, c);
     }else{
         let ab = mix(a ,b, .5);
         let ac = mix(a, c, .5);
