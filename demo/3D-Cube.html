@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>3D-Cube</title>
+</head>
+<body>
+<div style="margin: 0 auto; width: 512px">
+    <canvas id="c" width="512" height="512" style="border: 1px solid black; margin-top: 30px"></canvas>
+</div>
+
+<script>
+const VS =`
+
+attribute  vec3 aPos;
+attribute  vec4 aCol;
+
+varying vec4 vCol;
+
+uniform float theta;
+
+void main()
+{
+    float angles = radians( theta );
+    float c = cos( angles );
+    float s = sin( angles );
+
+
+    mat4 rz = mat4( c, s, 0.0, 0.0,
+		    -s,  c, 0.0, 0.0,
+		    0.0,  0.0, 1.0, 0.0,
+		    0.0,  0.0, 0.0, 1.0 );
+
+    mat4 ry =  mat4( 1., 0., 0.0, 0.0,
+		    0.,  c, s, 0.0,
+		    0.0, -s, c, 0.0,
+		    0.0,  0.0, 0.0, 1.0 );
+
+    vCol = aCol;
+    gl_Position = rz  *  ry*vec4(aPos, 1.);
+    gl_Position.z = -gl_Position.z;
+}
+`;
+
+const FS = `
+precision highp float;
+
+varying vec4 vCol;
+
+void main(){
+    gl_FragColor = vCol;
+}
+`;
+
+let vertices = [
+    -.5, -.5,  .5,
+    -.5,  .5,  .5,
+     .5,  .5,  .5,
+     .5, -.5,  .5,
+    -.5, -.5, -.5,
+    -.5,  .5, -.5,
+     .5,  .5, -.5,
+     .5, -.5, -.5
+];
+
+let colors = [
+     0.0, 0.0, 0.0, 1.0 ,  // black
+     1.0, 0.0, 0.0, 1.0 ,  // red
+     1.0, 1.0, 0.0, 1.0 ,  // yellow
+     0.0, 1.0, 0.0, 1.0 ,  // green
+     0.0, 0.0, 1.0, 1.0 ,  // blue
+     1.0, 0.0, 1.0, 1.0 ,  // magenta
+     0.0, 1.0, 1.0, 1.0 ,  // cyan
+     1.0, 1.0, 1.0, 1.0    // white
+];
+
+let indexes = [
+    1, 0, 3,
+    3, 2, 1,
+    2, 3, 7,
+    7, 6, 2,
+    3, 0, 4,
+    4, 7, 3,
+    6, 5, 1,
+    1, 2, 6,
+    4, 5, 6,
+    6, 7, 4,
+    5, 4, 0,
+    0, 1, 5
+];
+
+let program, gl, uTheta;
+let theta=0.;
+
+main();
+
+function main(){
+    initGl();
+    initProgram();
+    initBuffer();
+    initUniform();
+    render();
+}
+
+
+function initGl(){
+    gl = document.getElementById('c').getContext('webgl');
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    gl.clearColor(1., 1., 1., 1.);
+    gl.enable(gl.DEPTH_TEST);
+}
+
+
+function initProgram(){
+    let vs = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vs, VS);
+    gl.compileShader(vs);
+
+
+    let fs = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fs, FS);
+    gl.compileShader(fs);
+
+    program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    gl.useProgram(program);
+}
+
+function initBuffer(){
+    let pBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    let aPos = gl.getAttribLocation(program, 'aPos');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 0, 0);
+
+    let cBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, cBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+    let aCol = gl.getAttribLocation(program, 'aCol');
+    gl.enableVertexAttribArray(aCol);
+    gl.vertexAttribPointer(aCol, 4, gl.FLOAT, false, 0, 0);
+
+    let iBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iBuf);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint8Array(indexes), gl.STATIC_DRAW);
+}
+
+function initUniform(){
+    uTheta = gl.getUniformLocation(program, 'theta');
+    gl.uniform1f(uTheta, 0.);
+}
+
+function render(){
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    gl.uniform1f(uTheta, theta);
+    theta += 2.0;
+    gl.flush();
+    gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_BYTE, 0);
+    requestAnimationFrame(render);
+}
+
+
+
+
+</script>
+</body>
+</html>
