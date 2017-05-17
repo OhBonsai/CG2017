@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EasyDrawingBoard1</title>
+
+</head>
+<body>
+<div style="margin: 0 auto; width: 512px">
+    <canvas id="c" width="512" height="512" style="border: 1px solid black; margin-top: 30px"></canvas>
+</div>
+
+<div style="margin: 0 auto; width: 512px">
+<select id="s">
+    <option value="red">red</option>
+    <option value="green">green</option>
+    <option value="blue">blue</option>
+</select>
+<button id="b">
+    draw
+</button>
+</div>
+
+<script>
+const FS=`
+precision highp float;
+
+varying vec3 color;
+
+void main(){
+    gl_FragColor = vec4(color, 1.0);
+}
+`;
+
+const VS=`
+precision highp float;
+
+attribute vec2 vPos;
+attribute vec3 vCol;
+
+varying vec3 color;
+
+void main(){
+    color = vCol;
+    gl_Position = vec4(vPos, 0., 1.);
+}
+`;
+
+const Max = 200;
+
+
+let gl;
+let aC;
+let aV;
+let cBuf, vBuf;
+let program;
+
+let c=[0., 0., 0.];
+let idx = 0;
+let len_record = [];
+let off_record = [0];
+let numPolygon = 0;
+init();
+
+document.getElementById('s').addEventListener('click', function(e){
+    if (this.value === 'red'){
+        c = [1., 0., 0.];
+    }else if(this.value === 'green'){
+        c= [0., 1., 0.];
+    }else{
+        c= [0., 0., 1.];
+    }
+}, false);
+
+document.getElementById('b').addEventListener('click', function(e){
+    draw()
+}, false);
+
+document.getElementById('c').addEventListener('click', function(e){
+    let x = (e.clientX  - window.innerWidth/2)/256;
+    let y = (286 - e.clientY)/256;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, vBuf);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 2*idx ,new Float32Array([x,y]));
+    gl.bindBuffer(gl.ARRAY_BUFFER, cBuf);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 3*idx, new Float32Array(c));
+    idx++
+}, false);
+
+
+function draw(){
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    for(let i=0; i<numPolygon; i++){
+        gl.drawArrays(gl.TRIANGLE_FAN, off_record[i], len_record[i])
+    }
+}
+
+
+function init(){
+    initGl();
+    initProgram();
+    initDraw();
+    initBuffer();
+}
+
+function initGl(){
+    gl = document.getElementById('c').getContext('webgl');
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    gl.clearColor(0., 1., 1., 1.);
+}
+
+
+function initProgram(){
+    let vs = gl.createShader(gl.VERTEX_SHADER);
+    gl.shaderSource(vs, VS);
+    gl.compileShader(vs);
+
+    let fs = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fs, FS);
+    gl.compileShader(fs);
+
+    program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    gl.useProgram(program);
+}
+
+function initBuffer(){
+    vBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, Max*2,  gl.STATIC_DRAW);
+    aV = gl.getAttribLocation(program, 'vPos');
+    gl.enableVertexAttribArray(aV);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+    cBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, cBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, Max*3,  gl.STATIC_DRAW);
+    aC = gl.getAttribLocation(program, 'vCol');
+    gl.enableVertexAttribArray(aC);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+}
+
+
+function initDraw(){
+    gl.clear(gl.COLOR_BUFFER_BIT);
+}
+
+</script>
+
+
+</body>
+</html>

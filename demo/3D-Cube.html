@@ -157,7 +157,7 @@ function render(){
     gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
     gl.uniform1f(uTheta, theta);
     theta += 2.0;
-    gl.flush();
+//    gl.flush();
     gl.drawElements(gl.TRIANGLES, 36, gl.UNSIGNED_BYTE, 0);
     requestAnimationFrame(render);
 }
