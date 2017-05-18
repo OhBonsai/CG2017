@@ -21,6 +21,8 @@
 </button>
 </div>
 
+<div style="color: red; margin: 0 auto; width: 300px">点击画板至少三次，然后点击DRAW按钮</div>
+
 <script>
 const FS=`
 precision highp float;
@@ -57,7 +59,7 @@ let program;
 
 let c=[0., 0., 0.];
 let idx = 0;
-let len_record = [];
+let len_record = [0];
 let off_record = [0];
 let numPolygon = 0;
 init();
@@ -73,24 +75,33 @@ document.getElementById('s').addEventListener('click', function(e){
 }, false);
 
 document.getElementById('b').addEventListener('click', function(e){
+    if(len_record[len_record.length-1]<=2){
+        alert('at least click 3 times');
+        return
+    }
+    numPolygon++;
+    len_record.push(0);
+    off_record.push(idx);
     draw()
 }, false);
 
-document.getElementById('c').addEventListener('click', function(e){
+document.getElementById('c').addEventListener('mousedown', function(e){
     let x = (e.clientX  - window.innerWidth/2)/256;
     let y = (286 - e.clientY)/256;
 
     gl.bindBuffer(gl.ARRAY_BUFFER, vBuf);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 2*idx ,new Float32Array([x,y]));
+    gl.bufferSubData(gl.ARRAY_BUFFER, 2*4*idx ,new Float32Array([x,y]));
+
     gl.bindBuffer(gl.ARRAY_BUFFER, cBuf);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 3*idx, new Float32Array(c));
-    idx++
+    gl.bufferSubData(gl.ARRAY_BUFFER, 3*4*idx, new Float32Array(c));
+    len_record[numPolygon]++;
+
+    idx++;
 }, false);
 
 
 function draw(){
     gl.clear(gl.COLOR_BUFFER_BIT);
-
     for(let i=0; i<numPolygon; i++){
         gl.drawArrays(gl.TRIANGLE_FAN, off_record[i], len_record[i])
     }
@@ -130,17 +141,17 @@ function initProgram(){
 function initBuffer(){
     vBuf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, Max*2,  gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, Max*8,  gl.STATIC_DRAW);
     aV = gl.getAttribLocation(program, 'vPos');
     gl.enableVertexAttribArray(aV);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
     cBuf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, cBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, Max*3,  gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, Max*12,  gl.STATIC_DRAW);
     aC = gl.getAttribLocation(program, 'vCol');
     gl.enableVertexAttribArray(aC);
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
 }
 
 
