@@ -1,0 +1,40 @@
+{
+  "name": "resume",
+  "version": "0.0.1",
+  "description": "Resume for Bonsai",
+  "main": "index.js",
+  "engines": {
+    "node" : ">=6.0.0"
+  },
+  "scripts": {
+    "start": "webpack-dev-server ./app/index.js --inline --hot --colors --port=9967",
+    "build": "webpack  --minify",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OhBonsai/resume.git"
+  },
+  "keywords": [
+    "resume"
+  ],
+  "author": "Bonsai",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/OhBonsai/resume/issues"
+  },
+  "dependencies": {
+    "three": "latest",
+    "gl-vec2": "latest",
+    "polyline-normals": "latest"
+  },
+  "devDependencies": {
+    "babel-core": "^6.3.26",
+    "babel-loader": "^6.2.0",
+    "babel-preset-es2015": "^6.3.13",
+    "webpack": "^1.12.9",
+    "webpack-dev-server": "^1.14.0",
+    "css-loader": "latest",
+    "style-loader": "latest"
+  }
+}

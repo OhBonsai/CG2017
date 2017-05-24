@@ -1,0 +1,15 @@
+body {
+    margin: 0px;
+}
+
+html {
+    overflow: hidden
+}
+
+#help{
+    z-index: 999;
+    position: absolute;
+    right: 20px;
+    background: none;
+    color: white;
+}
