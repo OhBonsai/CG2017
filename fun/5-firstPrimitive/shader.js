@@ -5,7 +5,7 @@ class Shader {
         if(this.program !== null){
             this.gl = gl;
             gl.useProgram(this.program);
-            this.attribLoc = ShaderUtil.getShaderAttribLocation(gl, this.program);
+            this.attribLoc = ShaderUtil.getStandardAttribLocation(gl, this.program);
             this.uniformLoc = {
 
             }
@@ -93,7 +93,7 @@ class ShaderUtil {
         return program
     }
 
-    static getShaderAttribLocation(gl, program){
+    static getStandardAttribLocation(gl, program){
         return {
             position:   gl.getAttribLocation(program, ATTR_POSITION_NAME),
             normal:     gl.getAttribLocation(program, ATTR_NORMAL_NAME),
