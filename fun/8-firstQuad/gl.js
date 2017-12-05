@@ -16,12 +16,16 @@ function glInstance(el) {
     gl.mMeshCache = [];
     gl.cullFace(gl.BACK);  //背面不描画
     gl.frontFace(gl.CCW);  //默认值，逆时针是正面，CW顺时针是正面
-    /* 深度测试，把一些看不见的像素点剔除掉。为什么叫测试。以下是作者的回复，觉得可以解释为什么叫depth_test，而不是depth process
+    /* 深度测试，把一些看不见的像素点剔除掉。以下是作者的回复，觉得可以解释为什么叫depth_test，而不是depth process
        深度测试测试每个像素点的ZPosition. 当一个三角形光栅化，然后一个像素一个像素画在屏幕上，实际上每个点做了一次X/Y到屏幕X/Y的
        映射，比如有一个点Z值是-2,颜色是红色。那我们先画到屏幕上去，然后来个X,y值相同的，但是Z值是-1，颜色是黄色，如果
        我们设置深度测试函数depthFunc是小于等于即gl.depthFunc(gl.LEQUAL);。那么要剔除红色，然后来个黄色。
        同时屏幕那个点深度值从-2变成-1.
        所以，深度测试就是测试哪些点要画或者拒绝画出来，测试的根据是depth buffer。实际上一个长长的数组。
+
+       然后为什么叫测试而不叫process（这是我深深的疑惑）,作者也给出了解答
+       Test can mean to Check if something is correct or true. Process means "to do something". So you are
+       Checking(testing) if the pixel is closer to the eye...
     */
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.DEPTH_TEST);
