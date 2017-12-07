@@ -81,7 +81,7 @@ class ShaderUtil {
         let program = gl.createProgram();
         gl.attachShader(program, vShader);
         gl.attachShader(program, fShader);
-        gl.bindAttribLocation(program, ATTR_POSTION_LOC, ATTR_POSITION_NAME);
+        gl.bindAttribLocation(program, ATTR_POSITION_LOC, ATTR_POSITION_NAME);
         gl.bindAttribLocation(program, ATTR_NORMAL_LOC, ATTR_NORMAL_NAME);
         gl.bindAttribLocation(program, ATTR_UV_LOC, ATTR_UV_NAME);
 

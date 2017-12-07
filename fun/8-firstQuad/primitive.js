@@ -79,6 +79,9 @@ Primitive.GridAxis = class {
             verts.push(3);		//c2
         }
 
+        // let mesh = gl.fCreateMeshVAO("grid", null, verts, null, null);
+        // mesh.drawMode = gl.LINES;
+
         let attrColorLoc = 5,
             strideLen,
             mesh = {
@@ -94,11 +97,11 @@ Primitive.GridAxis = class {
         gl.bindVertexArray(mesh.vao);
         gl.bindBuffer(gl.ARRAY_BUFFER, mesh.bufVertices);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(ATTR_POSTION_LOC);
+        gl.enableVertexAttribArray(ATTR_POSITION_LOC);
         gl.enableVertexAttribArray(attrColorLoc);
 
         gl.vertexAttribPointer(
-            ATTR_POSTION_LOC  // Attribute Location
+            ATTR_POSITION_LOC  // Attribute Location
             , 3                // 在这个数据卷中，我们用到了几个元素
             , gl.FLOAT         // 元素的数据类型是什么
             , false            // 需要正规化吗？
@@ -135,8 +138,9 @@ Primitive.Quadrel = class {
             aIndex = [ 0,1,2, 2,3,0 ];
 
         let mesh = gl.fCreateMeshVAO("Quadrel", aIndex, aVert, null, aUV);
-        mesh.noCulling = false;
-        mesh.doBlending = false;
+        mesh.noCulling = true;
+        mesh.doBlending = true;
 
+        return mesh;
     }
 };

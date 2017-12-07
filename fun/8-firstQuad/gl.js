@@ -1,5 +1,5 @@
 const ATTR_POSITION_NAME = 'a_Pos';
-const ATTR_POSTION_LOC = 0;
+const ATTR_POSITION_LOC = 0;
 
 const ATTR_NORMAL_NAME = 'a_Normal';
 const ATTR_NORMAL_LOC = 1;
@@ -56,7 +56,7 @@ function glInstance(el) {
         this.viewport(0, 0, w, h);
         return this
     };
-
+    
     gl.fCreateMeshVAO = function (name, aryInd, aryVert, aryNorm, aryUV) {
         let rtn = {
             drawMode: this.TRIANGLES
@@ -72,8 +72,8 @@ function glInstance(el) {
 
             this.bindBuffer(this.ARRAY_BUFFER, rtn.bufVertices);
             this.bufferData(this.ARRAY_BUFFER, new Float32Array(aryVert), this.STATIC_DRAW);
-            this.enableVertexAttribArray(ATTR_POSTION_LOC);
-            this.vertexAttribPointer(ATTR_POSTION_LOC, 3, this.FLOAT, false, 0, 0);
+            this.enableVertexAttribArray(ATTR_POSITION_LOC);
+            this.vertexAttribPointer(ATTR_POSITION_LOC, 3, this.FLOAT, false, 0, 0);
         }
 
         if (aryNorm !== undefined && aryNorm !== null) {
@@ -99,11 +99,13 @@ function glInstance(el) {
             rtn.indexCount = aryInd.length;
             this.bindBuffer(this.ELEMENT_ARRAY_BUFFER, rtn.bufIndex);
             this.bufferData(this.ELEMENT_ARRAY_BUFFER, new Uint16Array(aryInd), this.STATIC_DRAW);
-            this.bindBuffer(this.ELEMENT_ARRAY_BUFFER, null);
         }
 
         this.bindVertexArray(null);
         this.bindBuffer(this.ARRAY_BUFFER, null);
+        if(aryInd !== null && aryInd !== undefined)  {
+            this.bindBuffer(this.ELEMENT_ARRAY_BUFFER,null);
+        }
 
         this.mMeshCache[name] = rtn;
         return rtn;

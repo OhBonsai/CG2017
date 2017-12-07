@@ -17,7 +17,6 @@ const fs = `#version 300 es
 const vs = `#version 300 es
     in vec3 a_position;
     in vec2 a_uv;
-    layout(location=5) in float a_color;
     
     uniform mat4 uMVMatrix;
     uniform mat4 uPMatrix;
@@ -41,11 +40,9 @@ let gl,
 
 
 class TestShader extends Shader {
-    constructor(gl, aryColor) {
+    constructor(gl, pMatrix) {
         super(gl, vs, fs);
-
-        this.uniformLoc.uColor = gl.getUniformLocation(this.program, "uColor");
-        gl.uniform3fv(this.uniformLoc.uColor, new Float32Array(aryColor));
+        this.setPerspective(pMatrix);
         gl.useProgram(null);
     }
 }
@@ -65,13 +62,13 @@ function main() {
     gCamera.transform.position.set(0, 1, 3);
     gCameraCtrl = new CameraControl(gl, gCamera);
 
-    gShader = new TestShader(gl, [.8, .8, .8, 1, 0, 0, 0, 1, 0, 0, 0, 1]);// Grey Red Green Blue
-    gShader.activate().setPerspective(gCamera.projectionMatrix).deactivate();
+    gShader = new TestShader(gl, gCamera.projectionMatrix);// Grey Red Green Blue
 
-    gModel = Primitive.Quadrel.createModel(gl);
-    gModel.setPosition(0,1,0).setScale(0.2,0.2,0.2);
-
-    gModel2 = new Model(gl.mMeshCache["Quad"]); //Extra, Show 2 modals sharing one mesh
+    gModel = Primitive.GridAxis.createModel(gl);
+    // gModel = Primitive.Quadrel.createModel(gl);
+    // gModel.setPosition(0,1,0).setScale(0.2,0.2,0.2);
+    //
+    // gModel2 = new Model(gl.mMeshCache["Quadrel"]); //Extra, Show 2 modals sharing one mesh
 
     renderLoop = new RenderLoop(onRender).start();
 }

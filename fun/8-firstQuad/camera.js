@@ -21,8 +21,8 @@ class Camera{
     }
 
     panY(v){
-        this.transform.position.y += this.transform.up[1] * v;
         this.updateViewMatrix();
+        this.transform.position.y += this.transform.up[1] * v;
         if(this.mode === Camera.MODE_ORBIT) return;
         this.transform.position.x += this.transform.up[0] * v;
         this.transform.position.z += this.transform.up[2] * v;
@@ -30,12 +30,12 @@ class Camera{
 
     panZ(v){
         this.updateViewMatrix();
-        if(this.mode == Camera.MODE_ORBIT){
-            this.transform.position.z += this.transform.right[2] * v;
+        if(this.mode === Camera.MODE_ORBIT){
+            this.transform.position.z += v;
         }
-        this.transform.position.z += this.transform.forward[2] * v;
-        this.transform.position.y += this.transform.forward[1] * v;
         this.transform.position.x += this.transform.forward[0] * v;
+        this.transform.position.y += this.transform.forward[1] * v;
+        this.transform.position.z += this.transform.forward[2] * v;
 
     }
 
@@ -53,14 +53,15 @@ class Camera{
         }
 
         this.transform.updateDirection();
-        Matrix4.invert(this.viewMatrix, this.transform.matView.raw)
+        Matrix4.invert(this.viewMatrix, this.transform.matView.raw);
         return this.viewMatrix;
     }
 
 }
 
-Camera.MODE_ORBIT = 1;
 Camera.MODE_FREE = 0;
+Camera.MODE_ORBIT = 1;
+
 
 class CameraControl{
 
