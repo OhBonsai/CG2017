@@ -32,11 +32,11 @@ class Camera{
         this.updateViewMatrix();
         if(this.mode === Camera.MODE_ORBIT){
             this.transform.position.z += v;
+        }else{
+            this.transform.position.x += this.transform.forward[0] * v;
+            this.transform.position.y += this.transform.forward[1] * v;
+            this.transform.position.z += this.transform.forward[2] * v;
         }
-        this.transform.position.x += this.transform.forward[0] * v;
-        this.transform.position.y += this.transform.forward[1] * v;
-        this.transform.position.z += this.transform.forward[2] * v;
-
     }
 
     updateViewMatrix(){

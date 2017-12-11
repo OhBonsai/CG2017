@@ -5,8 +5,8 @@ class Shader {
         if(this.program !== null){
             this.gl = gl;
             gl.useProgram(this.program);
-            this.attribLoc = ShaderUtil.getStandardAttribLocation(gl, this.program);
-            this.uniformLoc = ShaderUtil.getStandardUniformLocation(gl, this.program);
+            this.attribLoc = ShaderUtil.getStandardAttribLocations(gl, this.program);
+            this.uniformLoc = ShaderUtil.getStandardUniformLocations(gl, this.program);
         }
     }
 
@@ -47,13 +47,19 @@ class Shader {
     renderModel(model){
         this.setModelMatrix(model.transform.getViewMatrix());
         this.gl.bindVertexArray(model.mesh.vao);
+
+        if(model.mesh.noCulling) this.gl.disable(this.gl.CULL_FACE);
+        if(model.mesh.doBlending) this.gl.enable(this.gl.BLEND);
+
         if(model.mesh.indexCount){
-            this.gl.drawElements(model.mesh.drawMode, model.mesh.indexLength, gl.UNSIGNED_SHORT, 0);
+            this.gl.drawElements(model.mesh.drawMode, model.mesh.indexCount, gl.UNSIGNED_SHORT, 0);
         }else{
                 this.gl.drawArrays(model.mesh.drawMode, 0, model.mesh.vertexCount);
         }
 
         this.gl.bindVertexArray(null);
+        if(model.mesh.noCulling) this.gl.enable(this.gl.CULL_FACE);
+        if(model.mesh.doBlending) this.gl.disable(this.gl.BLEND);
         return this;
     }
 }
@@ -107,7 +113,7 @@ class ShaderUtil {
         return program
     }
 
-    static getStandardAttribLocation(gl, program){
+    static getStandardAttribLocations(gl, program){
         return {
             position:   gl.getAttribLocation(program, ATTR_POSITION_NAME),
             normal:     gl.getAttribLocation(program, ATTR_NORMAL_NAME),
@@ -115,7 +121,7 @@ class ShaderUtil {
         }
     }
 
-    static getStandardUniformLocation(gl, program){
+    static getStandardUniformLocations(gl, program){
         return {
             perspective:   gl.getUniformLocation(program, 'uPMatrix'),
             modelMatrix:   gl.getUniformLocation(program, 'uMVMatrix'),

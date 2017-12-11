@@ -28,7 +28,6 @@ function glInstance(el) {
        Checking(testing) if the pixel is closer to the eye...
     */
     gl.enable(gl.DEPTH_TEST);
-    gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
     gl.depthFunc(gl.LEQUAL); //设置深度缓冲比较函数。low and equal 还有一些ge什么的
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); //定义像素混合函数。有点像图像处理里面的模糊度计算
