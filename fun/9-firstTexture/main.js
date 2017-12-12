@@ -1,46 +1,16 @@
-const fs = `#version 300 es
-    precision mediump float;
-
-    in lowp vec4 color;
-    out vec4 finalColor;
-    
-    void main(void){
-        finalColor = color;
-    }
-`;
-
-
-// layout是3.0的语法，提前预设好uniform的位置。以前都是getUniformLocation(xx)，返回一个值。
-// 不过好像getUniformLocation也是按照你代码顺序，uniformLocation从1慢慢排的
-const vs = `#version 300 es
-    in vec3 a_position;
-    layout(location=5) in float a_color;
-    
-    uniform mat4 uMVMatrix;
-    uniform mat4 uPMatrix;
-    uniform mat4 uCameraMatrix;
-    uniform vec3 uColor[4];
-    
-    out lowp vec4 color;
-
-    void main(void){
-        color = vec4(uColor[int(a_color)], 1.0);
-        gl_Position =uPMatrix * uCameraMatrix * uMVMatrix * vec4(a_position, 1.0 );
-    }
-`;
-
 let gl,
     renderLoop,
-    gShader = null,
+    gGridShader = null,
+    gQuadShader = null,
     gridObj = null,
-    cubeObj = null,
+    quadObj = null,
     gCamera = null,
     gCameraCtrl = null;
 
 
-class TestShader extends Shader {
+class GridShader extends Shader {
     constructor(gl, aryColor) {
-        super(gl, vs, fs);
+        super(gl, gridVS, gridFS);
 
         this.uniformLoc.uColor = gl.getUniformLocation(this.program, "uColor");
         gl.uniform3fv(this.uniformLoc.uColor, new Float32Array(aryColor));
@@ -48,16 +18,41 @@ class TestShader extends Shader {
     }
 }
 
+class QuadShader extends Shader{
+    constructor(gl, pMatrix){
+        super(gl, testVS, testFS);
+        this.setPerspective(pMatrix);
+        this.mainTexture = -1;
+        gl.useProgram(null);
+    }
+
+    setTexture(texId){
+        this.mainTexture = texId;
+        return this
+    }
+
+    preRender(){
+        this.gl.activeTexture(this.gl.TEXTURE0);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.mainTexture);
+        this.gl.uniform1i(this.uniformLoc.mainTexture, 0);
+
+        return this
+    }
+}
+
 let onRender = function () {
     gCamera.updateViewMatrix();
     gl.fClear();
-    gShader.activate()
+    gGridShader.activate()
         .setCameraMatrix(gCamera.viewMatrix)
         .renderModel(gridObj.preRender());
+    gQuadShader.activate()
+        .setCameraMatrix(gCamera.viewMatrix)
+        .renderModel(quadObj.preRender())
 };
 
 function main() {
-    gl = glInstance('container').fFitScreen(.65, .6).fClear();
+    gl = glInstance('container').fFitScreen().fClear();
 
     gCamera = new Camera(gl);
     gCamera.transform.position.set(0, 1, 3);
@@ -65,16 +60,20 @@ function main() {
     
     gl.fLoadTexture("tex001", document.getElementById('imgTex1'));
 
-    gShader = new TestShader(gl, [.8, .8, .8, 1, 0, 0, 0, 1, 0, 0, 0, 1]);// Grey Red Green Blue
-    gShader.activate().setPerspective(gCamera.projectionMatrix).deactivate();
+    gGridShader = new GridShader(gl, [.8, .8, .8, 1, 0, 0, 0, 1, 0, 0, 0, 1]);// Grey Red Green Blue
+    gGridShader.activate().setPerspective(gCamera.projectionMatrix).deactivate();
 
-    gridObj = Primitive.GridAxis.createModel(gl);
-    cubeObj = Primitive.Cuboid.createModel(gl);
-    cubeObj.setPosition(0., 0., 6.);
+    gQuadShader = new QuadShader(gl, gCamera.projectionMatrix);
+    
+    
+    gridObj = Primitive.GridAxis.createModel(gl, false);
+    quadObj = Primitive.Quadrel.createModel(gl);
 
     renderLoop = new RenderLoop(onRender).start();
 }
 
-main();
+window.addEventListener("load",function() {
+    main();
+});
 
 

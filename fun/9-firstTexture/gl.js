@@ -1,5 +1,5 @@
 const ATTR_POSITION_NAME = 'a_Pos';
-const ATTR_POSTION_LOC = 0;
+const ATTR_POSITION_LOC = 0;
 
 const ATTR_NORMAL_NAME = 'a_Normal';
 const ATTR_NORMAL_LOC = 1;
@@ -51,15 +51,15 @@ function glInstance(el){
         return buffer
     };
 
-    gl.fSetSize = function(w, h){
-        this.canvas.style.width = w + 'px';
-        this.canvas.style.height = w + 'px';
-        this.canvas.width = w;
-        this.canvas.height = h;
-
-        this.viewport(0, 0, w, h);
-        return this
-    };
+    // gl.fSetSize = function(w, h){
+    //     this.canvas.style.width = w + 'px';
+    //     this.canvas.style.height = w + 'px';
+    //     this.canvas.width = w;
+    //     this.canvas.height = h;
+    //
+    //     this.viewport(0, 0, w, h);
+    //     return this
+    // };
 
     gl.fCreateMeshVAO = function(name, aryInd, aryVert, aryNorm, aryUV, vertLen){
         let rtn = {
@@ -76,8 +76,8 @@ function glInstance(el){
 
             this.bindBuffer(this.ARRAY_BUFFER, rtn.bufVertices);
             this.bufferData(this.ARRAY_BUFFER, new Float32Array(aryVert), this.STATIC_DRAW);
-            this.enableVertexAttribArray(ATTR_POSTION_LOC);
-            this.vertexAttribPointer(ATTR_POSTION_LOC, 3, this.FLOAT, false, 0, 0);
+            this.enableVertexAttribArray(ATTR_POSITION_LOC);
+            this.vertexAttribPointer(ATTR_POSITION_LOC, 3, this.FLOAT, false, 0, 0);
         }
 
         if(aryNorm !== undefined && aryNorm !== null){
@@ -113,20 +113,30 @@ function glInstance(el){
         return rtn;
     };
 
-    gl.fLoadTexture = function(name, img, doYFlip){
+    gl.fLoadTexture = function(name, img, doYFlip=true){
         let tex = this.createTexture();
         // 上下翻转，所有参数可参考https://developer.mozilla.org/zh-CN/docs/Web/API/WebGLRenderingContext/pixelStorei
         if(doYFlip === true) this.pixelStorei(this.UNPACK_FLIP_Y_WEBGL, true);
 
+        if(img === null){
+            alert("texture image is null!")
+            return
+        }
+
         this.bindTexture(this.TEXTURE_2D, tex);
-        this.texImage2D(
-            this.TEXTURE_2D,    // target
-            0,                  // image level. 0-n
-            this.RGBA,         // image type
-            this.RGBA,         // ???
-            this.UNSIGNED_BYTE,// pixels A Uint8Array must be used if type is gl.UNSIGNED_BYTE
-            img                // Source
+        try{
+            this.texImage2D(
+                this.TEXTURE_2D,    // target
+                0,                  // image level. 0-n
+                this.RGBA,         // image type
+                this.RGBA,         // ???
+                this.UNSIGNED_BYTE,// pixels A Uint8Array must be used if type is gl.UNSIGNED_BYTE
+                img                // Source
             );
+        }catch(e){
+            console.log(e)
+        }
+
 
         //如何纹理纹素映射像素，http://blog.csdn.net/u014800094/article/details/55271784
         this.texParameteri(
@@ -148,8 +158,23 @@ function glInstance(el){
         return tex
     };
 
-    gl.fFitScreen = function(wp, hp){
-        return this.fSetSize(window.innerWidth * (wp || 1),window.innerHeight * (hp || 1));
+    gl.fSetSize = function(w,h){
+        //set the size of the canvas, on chrome we need to set it 3 ways to make it work perfectly.
+        this.canvas.style.width = w + "px";
+        this.canvas.style.height = h + "px";
+        this.canvas.width = w;
+        this.canvas.height = h;
+
+        //when updating the canvas size, must reset the viewport of the canvas
+        //else the resolution webgl renders at will not change
+        this.viewport(0,0,w,h);
+        return this;
+    };
+
+    //Set the size of the canvas to fill a % of the total screen.
+    gl.fFitScreen = function(wp,hp){ return this.fSetSize(
+        window.innerWidth * (wp || 1.),
+        window.innerHeight * (hp || 1.));
     };
 
     return gl
