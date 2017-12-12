@@ -54,7 +54,7 @@ class Shader {
         if(model.mesh.indexCount){
             this.gl.drawElements(model.mesh.drawMode, model.mesh.indexCount, gl.UNSIGNED_SHORT, 0);
         }else{
-                this.gl.drawArrays(model.mesh.drawMode, 0, model.mesh.vertexCount);
+            this.gl.drawArrays(model.mesh.drawMode, 0, model.mesh.vertexCount);
         }
 
         this.gl.bindVertexArray(null);
