@@ -6,8 +6,8 @@ const fs = `#version 300 es
     out vec4 finalColor;
     
     void main(void){
-        float c = (uv.x <= .1 || uv.x >=.9 || uv.y <= .1 || uv.y >= .9) ? 0. : 1.;
-        finalColor = vec4(0., 0., .0, 1.);
+        float c = (uv.x <= .1 || uv.x >=.9) && (uv.y <= .1 || uv.y >= .9) ? 0. : 1.;
+        finalColor = vec4(c, c, c, 1.-c);
     }
 `;
 
@@ -34,7 +34,6 @@ let gl,
     renderLoop,
     gShader = null,
     gModel = null,
-    gModel2 = null,
     gCamera = null,
     gCameraCtrl = null;
 
@@ -63,22 +62,7 @@ function main() {
     gCameraCtrl = new CameraControl(gl, gCamera);
 
     gShader = new TestShader(gl, gCamera.projectionMatrix);// Grey Red Green Blue
-
-    // gModel = Primitive.GridAxis.createModel(gl);
     gModel = Primitive.Quadrel.createModel(gl);
-    // gModel.setPosition(0,1,0).setScale(0.2,0.2,0.2);
-
-    // let mesh = gl.fCreateMeshVAO("dots", null, [
-    //     0,    0,    0,
-    //     0.1,  0.1,  0,
-    //     0.1, -0.1,  0,
-    //     -0.1, -0.1,  0,
-    //     -0.1,  0.1,  0]);
-    // mesh.drawMode = gl.POINTS;
-    // gModel = new Model(mesh);
-
-    // gModel2 = new Model(gl.mMeshCache["Quadrel"]); //Extra, Show 2 modals sharing one mesh
-
     renderLoop = new RenderLoop(onRender, 30).start();
 }
 
