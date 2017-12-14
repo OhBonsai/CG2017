@@ -32,10 +32,29 @@ class GlUtil{
 
 function glInstance(el){
     let gl = document.getElementById(el).getContext("webgl2");
-    if(!gl){alert("can't create webgl2 context")}
+    if (!gl) {
+        alert("can't create webgl2 context")
+    }
 
     gl.mMeshCache = [];
     gl.mTextureCache = [];
+    gl.cullFace(gl.BACK);  //背面不描画
+    gl.frontFace(gl.CCW);  //默认值，逆时针是正面，CW顺时针是正面
+    /* 深度测试，把一些看不见的像素点剔除掉。以下是作者的回复，觉得可以解释为什么叫depth_test，而不是depth process
+       深度测试测试每个像素点的ZPosition. 当一个三角形光栅化，然后一个像素一个像素画在屏幕上，实际上每个点做了一次X/Y到屏幕X/Y的
+       映射，比如有一个点Z值是-2,颜色是红色。那我们先画到屏幕上去，然后来个X,y值相同的，但是Z值是-1，颜色是黄色，如果
+       我们设置深度测试函数depthFunc是小于等于即gl.depthFunc(gl.LEQUAL);。那么要剔除红色，然后来个黄色。
+       同时屏幕那个点深度值从-2变成-1.
+       所以，深度测试就是测试哪些点要画或者拒绝画出来，测试的根据是depth buffer。实际上一个长长的数组。
+
+       然后为什么叫测试而不叫process（这是我深深的疑惑）,作者也给出了解答
+       Test can mean to Check if something is correct or true. Process means "to do something". So you are
+       Checking(testing) if the pixel is closer to the eye...
+    */
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+    gl.depthFunc(gl.LEQUAL); //设置深度缓冲比较函数。low and equal 还有一些ge什么的
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); //定义像素混合函数。有点像图像处理里面的模糊度计算
     gl.clearColor(1., 1., 1., 1.);
 
     gl.fClear = function(){
@@ -51,17 +70,19 @@ function glInstance(el){
         return buffer
     };
 
-    // gl.fSetSize = function(w, h){
-    //     this.canvas.style.width = w + 'px';
-    //     this.canvas.style.height = w + 'px';
-    //     this.canvas.width = w;
-    //     this.canvas.height = h;
-    //
-    //     this.viewport(0, 0, w, h);
-    //     return this
-    // };
+    gl.fSetSize = function (w, h) {
+        this.canvas.style.width = w + "px";
+        this.canvas.style.height = h + "px";
+        this.canvas.width = w;
+        this.canvas.height = h;
 
-    gl.fCreateMeshVAO = function(name, aryInd, aryVert, aryNorm, aryUV, vertLen){
+        this.viewport(0, 0, w, h);
+        return this
+    };
+
+
+
+    gl.fCreateMeshVAO = function (name, aryInd, aryVert, aryNorm, aryUV) {
         let rtn = {
             drawMode: this.TRIANGLES
         };
@@ -71,7 +92,7 @@ function glInstance(el){
 
         if(aryVert !== undefined && aryVert !== null){
             rtn.bufVertices = this.createBuffer();
-            rtn.vertexComponentLen = vertLen || 3;
+            rtn.vertexComponentLen = 3;
             rtn.vertexCount = aryVert.length / rtn.vertexComponentLen;
 
             this.bindBuffer(this.ARRAY_BUFFER, rtn.bufVertices);
@@ -103,11 +124,13 @@ function glInstance(el){
             rtn.indexCount = aryInd.length;
             this.bindBuffer(this.ELEMENT_ARRAY_BUFFER, rtn.bufIndex);
             this.bufferData(this.ELEMENT_ARRAY_BUFFER, new Uint16Array(aryInd), this.STATIC_DRAW);
-            this.bindBuffer(this.ELEMENT_ARRAY_BUFFER, null);
         }
 
         this.bindVertexArray(null);
         this.bindBuffer(this.ARRAY_BUFFER, null);
+        if(aryInd !== null && aryInd !== undefined)  {
+            this.bindBuffer(this.ELEMENT_ARRAY_BUFFER,null);
+        }
 
         this.mMeshCache[name] = rtn;
         return rtn;
@@ -124,18 +147,15 @@ function glInstance(el){
         }
 
         this.bindTexture(this.TEXTURE_2D, tex);
-        try{
-            this.texImage2D(
-                this.TEXTURE_2D,    // target
-                0,                  // image level. 0-n
-                this.RGBA,         // image type
-                this.RGBA,         // ???
-                this.UNSIGNED_BYTE,// pixels A Uint8Array must be used if type is gl.UNSIGNED_BYTE
-                img                // Source
-            );
-        }catch(e){
-            console.log(e)
-        }
+
+        this.texImage2D(
+            this.TEXTURE_2D,    // target
+            0,                  // image level. 0-n
+            this.RGBA,         // image type
+            this.RGBA,         // ???
+            this.UNSIGNED_BYTE,// pixels A Uint8Array must be used if type is gl.UNSIGNED_BYTE
+            img                // Source
+        );
 
 
         //如何纹理纹素映射像素，http://blog.csdn.net/u014800094/article/details/55271784
@@ -152,24 +172,14 @@ function glInstance(el){
         );
 
         this.generateMipmap(this.TEXTURE_2D); //适配不同大小的Texture来贴图，防止失真
+        this.bindTexture(this.TEXTURE_2D,null);
         this.mTextureCache[name] = tex;
 
         if(doYFlip === true) this.pixelStorei(this.UNPACK_FLIP_Y_WEBGL, false);
-        return tex
+        return tex;
     };
 
-    gl.fSetSize = function(w,h){
-        //set the size of the canvas, on chrome we need to set it 3 ways to make it work perfectly.
-        this.canvas.style.width = w + "px";
-        this.canvas.style.height = h + "px";
-        this.canvas.width = w;
-        this.canvas.height = h;
 
-        //when updating the canvas size, must reset the viewport of the canvas
-        //else the resolution webgl renders at will not change
-        this.viewport(0,0,w,h);
-        return this;
-    };
 
     //Set the size of the canvas to fill a % of the total screen.
     gl.fFitScreen = function(wp,hp){ return this.fSetSize(

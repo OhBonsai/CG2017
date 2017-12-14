@@ -1,5 +1,3 @@
-// quad shader
-
 const quadVS = `#version 300 es
     in vec3 a_position;
     in vec2 a_uv;
@@ -12,7 +10,7 @@ const quadVS = `#version 300 es
     
 
     void main(void){
-        texCoord = vec2(a_uv);
+        texCoord = a_uv;
         gl_Position =uPMatrix * uCameraMatrix * uMVMatrix * vec4(a_position, 1.0 );
     }
 `;

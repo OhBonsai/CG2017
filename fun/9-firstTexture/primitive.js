@@ -9,10 +9,10 @@ Primitive.GridAxis = class {
         return new Model(Primitive.GridAxis.createMesh(gl, incAxis));
     }
 
-    static createMesh(gl, incAxis = true) {
+    static createMesh(gl, incAxis = true, s = 1.8, d = 10.0) {
         let verts = [],
-            size = 1.8,
-            div = 10.0,
+            size = s,
+            div = d,
             step = size / div,
             half = size / 2;
 

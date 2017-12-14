@@ -2,6 +2,7 @@ let gl,
     renderLoop,
     gGridShader = null,
     gQuadShader = null,
+    gSimpleShader = null,
     gridObj = null,
     quadObj = null,
     gCamera = null,
@@ -9,18 +10,26 @@ let gl,
 
 
 class GridShader extends Shader {
-    constructor(gl, aryColor) {
+    constructor(gl, aryColor, pMatrix) {
         super(gl, gridVS, gridFS);
-
+        this.setPerspective(pMatrix);
         this.uniformLoc.uColor = gl.getUniformLocation(this.program, "uColor");
         gl.uniform3fv(this.uniformLoc.uColor, new Float32Array(aryColor));
         gl.useProgram(null);
     }
 }
 
+class TestShader extends Shader {
+    constructor(gl, pMatrix) {
+        super(gl, testVS, testFS);
+        this.setPerspective(pMatrix);
+        gl.useProgram(null);
+    }
+}
+
 class QuadShader extends Shader{
     constructor(gl, pMatrix){
-        super(gl, testVS, testFS);
+        super(gl, quadVS, quadFS);
         this.setPerspective(pMatrix);
         this.mainTexture = -1;
         gl.useProgram(null);
@@ -60,13 +69,12 @@ function main() {
     
     gl.fLoadTexture("tex001", document.getElementById('imgTex1'));
 
-    gGridShader = new GridShader(gl, [.8, .8, .8, 1, 0, 0, 0, 1, 0, 0, 0, 1]);// Grey Red Green Blue
-    gGridShader.activate().setPerspective(gCamera.projectionMatrix).deactivate();
+    gGridShader = new GridShader(gl, [.8, .8, .8, 1, 0, 0, 0, 1, 0, 0, 0, 1], gCamera.projectionMatrix);// Grey Red Green Blue
+    gQuadShader = new QuadShader(gl, gCamera.projectionMatrix).activate().setTexture(gl.mTextureCache['tex001']);
+    gSimpleShader = new TestShader(gl, gCamera.projectionMatrix);
 
-    gQuadShader = new QuadShader(gl, gCamera.projectionMatrix);
-    
-    
-    gridObj = Primitive.GridAxis.createModel(gl, false);
+
+    gridObj = Primitive.GridAxis.createModel(gl, true);
     quadObj = Primitive.Quadrel.createModel(gl);
 
     renderLoop = new RenderLoop(onRender).start();
