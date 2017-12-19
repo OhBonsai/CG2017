@@ -56,6 +56,7 @@ let onRender = function () {
         .setCameraMatrix(gCamera.viewMatrix)
         .renderModel(gridObj.preRender());
     gQuadShader.activate()
+        .preRender()
         .setCameraMatrix(gCamera.viewMatrix)
         .renderModel(quadObj.preRender())
 };
@@ -66,7 +67,7 @@ function main() {
     gCamera = new Camera(gl);
     gCamera.transform.position.set(0, 1, 3);
     gCameraCtrl = new CameraControl(gl, gCamera);
-    
+
     gl.fLoadTexture("tex001", document.getElementById('imgTex1'));
 
     gGridShader = new GridShader(gl, [.8, .8, .8, 1, 0, 0, 0, 1, 0, 0, 0, 1], gCamera.projectionMatrix);// Grey Red Green Blue

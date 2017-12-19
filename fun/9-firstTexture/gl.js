@@ -1,33 +1,11 @@
-const ATTR_POSITION_NAME = 'a_Pos';
+const ATTR_POSITION_NAME = 'a_position';
 const ATTR_POSITION_LOC = 0;
 
-const ATTR_NORMAL_NAME = 'a_Normal';
+const ATTR_NORMAL_NAME = 'a_normal';
 const ATTR_NORMAL_LOC = 1;
 
-const ATTR_UV_NAME = 'a_Uv';
+const ATTR_UV_NAME = 'a_uv';
 const ATTR_UV_LOC = 2;
-
-
-class GlUtil{
-    // Convert Hex colors to float Array
-    // example: GlUtil.rgbArray('#FF0000', '#FF0000', '#FF0000')
-    static rgbArray(){
-        if(arguments.length === 0) return null;
-        let rtn = [];
-
-        for(let c of arguments){
-            if (c.length < 6) continue;
-            let p = c[0] === '#' ? 1 : 0;
-            rtn.push(
-                parseInt(c[p]   +c[p+1], 16) / 255.0,
-                parseInt(c[p+2] +c[p+3], 16) / 255.0,
-                parseInt(c[p+4] +c[p+5], 16) / 255.0
-            )
-        }
-
-        return rtn
-    }
-}
 
 
 function glInstance(el){
@@ -142,7 +120,7 @@ function glInstance(el){
         if(doYFlip === true) this.pixelStorei(this.UNPACK_FLIP_Y_WEBGL, true);
 
         if(img === null){
-            alert("texture image is null!")
+            alert("texture image is null!");
             return
         }
 
