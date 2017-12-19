@@ -55,6 +55,9 @@ let onRender = function () {
     gGridShader.activate()
         .setCameraMatrix(gCamera.viewMatrix)
         .renderModel(gridObj.preRender());
+    // 这里由于没有写PreRender导致Texture一直没有传入shader中，报的错误也是
+    // 没有Buffer绑定Texture0。前几天已经定位到这个问题，看到preRender里面已经写uniform1i,但是没有看这个函数有没有调用。
+    // 唉--！
     gQuadShader.activate()
         .preRender()
         .setCameraMatrix(gCamera.viewMatrix)
