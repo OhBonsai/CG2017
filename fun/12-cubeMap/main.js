@@ -19,11 +19,17 @@ class GridShader extends Shader {
 }
 
 class CubeMapShader extends Shader {
-    constructor(gl, pMatrix, aryColor) {
+    constructor(gl, pMatrix, dayTex, nightTex) {
         super(gl, cubeVS, cubeFS);
+
+        this.dayTex = dayTex;
+        this.nightTex = nightTex;
+
         this.setPerspective(pMatrix);
-        this.uniformLoc.uColor = gl.getUniformLocation(this.program, "uColor");
-        gl.uniform3fv(this.uniformLoc.uColor, new Float32Array(aryColor));
+
+        this.uniformLoc.dayTex = gl.getUniformLocation(this.program, "uDayTex");
+        this.uniformLoc.nightTex = gl.getUniformLocation(this.program, "uNightTex");
+
         gl.useProgram(null);
     }
 
@@ -32,15 +38,14 @@ class CubeMapShader extends Shader {
         return this
     }
 
-    setTexture(texId){
-        this.mainTexture = texId;
-        return this
-    }
-
     preRender(){
         this.gl.activeTexture(this.gl.TEXTURE0);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.mainTexture);
-        this.gl.uniform1i(this.uniformLoc.mainTexture, 0);
+        this.gl.bindTexture(this.gl.TEXTURE_CUBE_MAP, this.dayTex);
+        this.gl.uniform1i(this.uniformLoc.dayTex, 0);
+
+        this.gl.activeTexture(this.gl.TEXTURE1);
+        this.gl.bindTexture(this.gl.TEXTURE_CUBE_MAP, this.nightTex);
+        this.gl.uniform1i(this.uniformLoc.nightTex, 1);
 
         return this
     }
@@ -53,9 +58,8 @@ let onRender = function () {
     gGridShader.activate()
         .setCameraMatrix(gCamera.viewMatrix)
         .renderModel(gridObj.preRender());
-    gCubeMapShader.activate()
-        .preRender()
-        .setCameraMatrix(gCamera.viewMatrix)
+    gCubeMapShader.activate().preRender()
+        .setCameraMatrix(gCamera.getTranslatelessMatrix())
         .setTime(performance.now())
         .renderModel(cubeObj.preRender())
 };
@@ -81,7 +85,7 @@ function main() {
 
     cubeObj = Primitive.Cube24.createModel(gl, 'cubeMap', 10, 10, 10, 0, 0, 0);
     gCubeMapShader = new CubeMapShader(
-
+        gl, gCamera.projectionMatrix, gl.mTextureCache["skybox01"], gl.mTextureCache["skybox02"]
     );
 
     gridObj = Primitive.GridAxis.createModel(gl, true);
