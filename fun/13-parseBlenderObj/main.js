@@ -6,6 +6,29 @@ let gl,
     gCameraCtrl = null;
 
 
+class SimpleShader extends Shader {
+
+    constructor(gl, pMatrix){
+        super(gl, simpleVS, simpleFS);
+        this.setPerspective(pMatrix);
+        this.mainTexture = -1;
+        gl.useProgram(null);
+    }
+
+    setTexture(texId){
+        this.mainTexture = texId;
+        return this
+    }
+
+    preRender(){
+        this.gl.activeTexture(this.gl.TEXTURE0);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.mainTexture);
+        this.gl.uniform1i(this.uniformLoc.mainTexture, 0);
+
+        return this
+    }
+}
+
 let onRender = function () {
     gCamera.updateViewMatrix();
     gl.fClear();
@@ -14,30 +37,6 @@ let onRender = function () {
         .renderModel(gObj.preRender())
 };
 
-
-class SimpleShader extends Shader {
-
-    constructor(gl, pMatrix){
-        super(gl, simpleVS, simpleFS);
-
-        this.setPerspective(pMatrix);
-        this.mainTexture = -1;
-        gl.useProgram(null);
-    }
-
-    setTexture(texID){ this.mainTexture = texID; return this; }
-
-    //Override
-    preRender(){
-        //Setup Texture
-        this.gl.activeTexture(this.gl.TEXTURE0);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.mainTexture);
-        this.gl.uniform1i(this.uniformLoc.mainTexture, 0);
-
-        return this;
-    }
-
-}
 function main() {
     gl = glInstance('container').fFitScreen().fClear();
 
@@ -46,9 +45,8 @@ function main() {
     gCameraCtrl = new CameraControl(gl, gCamera);
 
     gl.fLoadTexture("tex001", document.getElementById("tex001"));
-    gObj = new Model(ObjLoader.textToMesh("girl", obj_file, true));
-    gObj .setPosition(0,0,0).setScale(0.5,0.5,0.5);
-    gSimpleShader = new SimpleShader(gl, gCamera.viewMatrix).activate()
+    gObj = new Model( ObjLoader.domToMesh("objCube",obj_file,true) );
+    gSimpleShader = new SimpleShader(gl, gCamera.projectionMatrix).activate()
         .setTexture(gl.mTextureCache['tex001']);
 
     renderLoop = new RenderLoop(onRender).start();

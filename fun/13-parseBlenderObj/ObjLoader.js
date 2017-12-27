@@ -3,7 +3,7 @@ class ObjLoader{
         var d = ObjLoader.parseObjText(text, flipYUV);
         return gl.fCreateMeshVAO(meshName, d[0], d[1], d[2], d[3], 3);
     }
-	
+
 	static parseObjText(txt,flipYUV){
 		txt = txt.trim() + "\n"; //add newline to be able to access last line in the for loop
 
@@ -24,7 +24,7 @@ class ObjLoader{
 			fIndexCnt = 0,		//Final count of unique vertices
 			posA = 0,
 			posB = txt.indexOf("\n",0);
-		
+
 		while(posB > posA){
 			line = txt.substring(posA,posB).trim();
 
@@ -47,7 +47,7 @@ class ObjLoader{
 				//......................................................
 				// Process face data
 				// All index values start at 1, but javascript array index start at 0. So need to always subtract 1 from index to match things up
-				// Sample Data [Vertex Index, UV Index, Normal Index], Each line is a triangle or quad. 
+				// Sample Data [Vertex Index, UV Index, Normal Index], Each line is a triangle or quad.
 				// f 1/1/1 2/2/1 3/3/1 4/4/1
 				// f 34/41/36 34/41/35 34/41/36
 				// f 34//36 34//35 34//36
@@ -71,7 +71,7 @@ class ObjLoader{
 						}else{
 							//New Unique vertex data, Process it.
 							ary = itm[i].split("/");
-							
+
 							//Parse Vertex Data and save final version ordred correctly by index
 							ind = (parseInt(ary[0])-1) * 3;
 							fVert.push( cVert[ind] , cVert[ind+1] , cVert[ind+2] );
@@ -83,7 +83,7 @@ class ObjLoader{
 							//Parse Texture Data if available and save final version ordered correctly by index
 							if(ary[1] != ""){
 								ind = (parseInt(ary[1])-1) * 2;
-								fUV.push( cUV[ind] , 
+								fUV.push( cUV[ind] ,
 									(!flipYUV)? cUV[ind+1] : 1-cUV[ind+1]
 								);
 							}
@@ -107,7 +107,7 @@ class ObjLoader{
 			posA = posB+1;
 			posB = txt.indexOf("\n",posA);
 		}
-		
-		return [fIndex,fVert,fNorm,fUV];		
+
+		return [fIndex,fVert,fNorm,fUV];
 	}
 }//cls
