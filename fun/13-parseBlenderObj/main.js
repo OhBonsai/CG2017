@@ -44,8 +44,8 @@ function main() {
     gCamera.transform.position.set(0, 1, 3);
     gCameraCtrl = new CameraControl(gl, gCamera);
 
-    gl.fLoadTexture("tex001", document.getElementById("tex001"));
-    gObj = new Model( ObjLoader.domToMesh("objCube",obj_file,true) );
+    gl.fLoadTexture("tex001", document.getElementById("tex001"), false);
+    gObj = new Model( ObjLoader.textToMesh("objCube",obj_file,true) );
     gSimpleShader = new SimpleShader(gl, gCamera.projectionMatrix).activate()
         .setTexture(gl.mTextureCache['tex001']);
 
