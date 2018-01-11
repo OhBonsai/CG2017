@@ -14,7 +14,7 @@ class VertexDebugger{
     addColor(){
         if(arguments.length === 0) return this;
 
-        for(let i=0, c, p; i< arguments.lenght; i++){
+        for(let i=0, c, p; i< arguments.length; i++){
             if(arguments[i].length < 6) continue;
             c = arguments[i];
             p = (c[0] === '#') ? 1 : 0;
