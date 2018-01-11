@@ -55,6 +55,7 @@ class VertexDebugger{
     createShader(){
         let vShader = `#version 300 es
         layout(location=0) in vec4 a_position;
+        
         uniform mat4 uPMatrix;
         uniform mat4 uCameraMatrix;
         uniform mat4 uMVMatrix;
@@ -69,7 +70,7 @@ class VertexDebugger{
             vec4 pos = uMVMatrix * vec4(a_position.xyz, 1.);
             color = vec4(uColorAry[ int(a_position.w) ], 1.);
             gl_PointSize = (1. - distance(uCameraPos, pos.xyz) / 10. ) * uPointSize;
-            gl_Position = uPmatrx * uCameraMatrix * pos;
+            gl_Position = uPMatrix * uCameraMatrix * pos;
         }` ;
 
         let fShader = `#version 300 es

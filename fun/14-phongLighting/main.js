@@ -11,6 +11,7 @@ let onRender = function () {
     gCamera.updateViewMatrix();
     gl.fClear();
     girl.render(gCamera);
+    light.render(gCamera);
 };
 
 function main() {
@@ -21,7 +22,10 @@ function main() {
     gCameraCtrl = new CameraControl(gl, gCamera);
 
     girl = new Girl(gl, obj_file).finalize().setTexture("tex001");
-
+    light = new VertexDebugger(gl,10)
+        .addColor("#ff0000")
+        .addPoint(0,0,0,0)
+        .finalize();
     renderLoop = new RenderLoop(onRender).start();
 }
 
