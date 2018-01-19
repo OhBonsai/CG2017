@@ -12,12 +12,12 @@
  */
 
 class RenderLoop{
-    constructor(callback){
+    constructor(callback, fps){
         this.msLastFrame = null;
         this.msCurrent = null;
         this.callback = callback;
         this.isActive = false;
-        this.fps = 0;
+        this.fps = fps || 0;
 
         let that = this;
 

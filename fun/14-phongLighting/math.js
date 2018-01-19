@@ -1,5 +1,5 @@
 class MathUtil{
-    static Map(x, xMin, xMax, zMin, zMax){
+    static map(x, xMin, xMax, zMin, zMax){
         return (x-xMin)/(xMax-xMin) * (zMax-zMin) * zMin;
     }
 }

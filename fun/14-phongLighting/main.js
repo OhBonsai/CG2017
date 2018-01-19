@@ -5,11 +5,25 @@ let gl,
     gCamera = null,
     gCameraCtrl = null;
 
+let radius = 1.5,
+    angle = 0,
+    angInc = 1,
+    yPos = 0,
+    yPosInc = .2;
 
-
-let onRender = function () {
+let onRender = function (dt) {
     gCamera.updateViewMatrix();
     gl.fClear();
+
+    angle += angInc * dt;
+    yPos += yPosInc * dt;
+
+    let x = radius * Math.cos(angle);
+    let z = radius * Math.sin(angle);
+    let y = MathUtil.map(Math.sin(yPos),-1,1,0.1,2);
+    light.transform.position.set(x, y, z);
+
+
     girl.render(gCamera);
     light.render(gCamera);
 };
@@ -26,7 +40,7 @@ function main() {
         .addColor("#ff0000")
         .addPoint(0,0,0,0)
         .finalize();
-    renderLoop = new RenderLoop(onRender).start();
+    renderLoop = new RenderLoop(onRender, 60).start();
 }
 
 window.addEventListener("load",function() {
