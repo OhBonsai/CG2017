@@ -23,8 +23,7 @@ let onRender = function (dt) {
     let y = MathUtil.map(Math.sin(yPos),-1,1,0.1,2);
     light.transform.position.set(x, y, z);
 
-
-    girl.render(gCamera);
+    girl.render(gCamera, light);
     light.render(gCamera);
 };
 
