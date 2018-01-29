@@ -51,6 +51,7 @@ class Resources{
             let dat = this.queueData;
             Resources.gl.fLoadTexture(dat.name, this);
         }
+        Resources.loadNextItem();
     }
 
     static onDownloadError(){
