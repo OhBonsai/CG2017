@@ -1,15 +1,164 @@
 /**
  * Created by bonsai on 07/02/18.
  */
-let Bonsai = (function(){
+var Bonsai = (function(){
 
-    const DEG2RAD = Math.PI/180;
+    const DEG2RAD = Math.PI/180;		//Cache result, one less operation to do for each update.
 
-    function Init(Canvas2D){
+    let	gl = null,
+        CULLING_STATE = true,			//Global state if the feature is enabled
+        BLENDING_STATE = false;			//Same---
 
+
+    function Init(canvasID){
+        if(Bonsai.gl != null) return Bonsai.gl;
+
+        let canvas = document.getElementById(canvasID);
+        gl = canvas.getContext("webgl2");
+        if(!gl){ console.error("WebGL context is not available."); return null; }
+
+        //...................................................
+        //Setup GL, Set all the default configurations we need.
+        gl.cullFace(gl.BACK);								//Back is also default
+        gl.frontFace(gl.CCW);								//Dont really need to set it, its ccw by default.
+        gl.enable(gl.DEPTH_TEST);							//Shouldn't use this, use something else to add depth detection
+        gl.enable(gl.CULL_FACE);							//Cull back face, so only show triangles that are created clockwise
+        gl.depthFunc(gl.LEQUAL);							//Near things obscure far things
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);	//Setup default alpha blending
+        //gl.clearColor(1.0,1.0,1.0,1.0);	//Set clear color
+
+        //...................................................
+        //Methods
+        //Reset the canvas with our set background color.	
+        gl.fClear = function(){ this.clear(this.COLOR_BUFFER_BIT | this.DEPTH_BUFFER_BIT); return this; };
+        gl.fClearColor = function(hex){
+            let a = Util.rgbArray(hex);
+            gl.clearColor(a[0],a[1],a[2],1.0);
+            return this;
+        }
+
+        //Create and fill our Array buffer.
+        gl.fCreateArrayBuffer = function(floatAry,isStatic,isUnbind){
+            if(isStatic === undefined) isStatic = true; //So we can call this function without setting isStatic
+
+            let buf = this.createBuffer();
+            this.bindBuffer(this.ARRAY_BUFFER,buf);
+            this.bufferData(this.ARRAY_BUFFER, floatAry, (isStatic)? this.STATIC_DRAW : this.DYNAMIC_DRAW );
+            if(isUnbind != false) this.bindBuffer(this.ARRAY_BUFFER,null);
+            return buf;
+        };
+
+        //Textures
+        gl.fLoadTexture = function(name,img,doYFlip,noMips){ let tex = Bonsai.Res.Textures[name] = this.createTexture();  return this.fUpdateTexture(name,img,doYFlip,noMips); };
+        gl.fUpdateTexture = function(name,img,doYFlip,noMips){
+            let tex = this.mTextureCache[name];
+            if(doYFlip == true) this.pixelStorei(this.UNPACK_FLIP_Y_WEBGL, true);	//Flip the texture by the Y Position, So 0,0 is bottom left corner.
+
+            this.bindTexture(this.TEXTURE_2D, tex);														//Set text buffer for work
+            this.texImage2D(this.TEXTURE_2D, 0, this.RGBA, this.RGBA, this.UNSIGNED_BYTE, img);			//Push image to GPU.
+
+            if(noMips === undefined || noMips == false){
+                this.texParameteri(this.TEXTURE_2D, this.TEXTURE_MAG_FILTER, this.LINEAR);					//Setup up scaling
+                this.texParameteri(this.TEXTURE_2D, this.TEXTURE_MIN_FILTER, this.LINEAR_MIPMAP_NEAREST);	//Setup down scaling
+                this.generateMipmap(this.TEXTURE_2D);	//Precalc different sizes of texture for better quality rendering.
+            }else{
+                this.texParameteri(this.TEXTURE_2D, this.TEXTURE_MAG_FILTER, this.NEAREST);
+                this.texParameteri(this.TEXTURE_2D, this.TEXTURE_MIN_FILTER, this.NEAREST);
+                this.texParameteri(this.TEXTURE_2D, this.TEXTURE_WRAP_S, this.CLAMP_TO_EDGE);
+                this.texParameteri(this.TEXTURE_2D, this.TEXTURE_WRAP_T, this.CLAMP_TO_EDGE);
+            }
+
+            this.bindTexture(this.TEXTURE_2D,null);									//Unbind
+
+            if(doYFlip == true) this.pixelStorei(this.UNPACK_FLIP_Y_WEBGL, false);	//Stop flipping textures
+            return tex;
+        }
+
+        //imgAry must be 6 elements long and images placed in the right order
+        //RIGHT,LEFT,TOP,BOTTOM,BACK,FRONT
+        gl.fLoadCubeMap = function(name,imgAry){
+            if(imgAry.length != 6) return null;
+
+            //Cube Constants values increment, so easy to start with right and just add 1 in a loop
+            //To make the code easier costs by making the imgAry coming into the function to have
+            //the images sorted in the same way the constants are set.
+            //	TEXTURE_CUBE_MAP_POSITIVE_X - Right	:: TEXTURE_CUBE_MAP_NEGATIVE_X - Left
+            //	TEXTURE_CUBE_MAP_POSITIVE_Y - Top 	:: TEXTURE_CUBE_MAP_NEGATIVE_Y - Bottom
+            //	TEXTURE_CUBE_MAP_POSITIVE_Z - Back	:: TEXTURE_CUBE_MAP_NEGATIVE_Z - Front
+
+            let tex = this.createTexture();
+            this.bindTexture(this.TEXTURE_CUBE_MAP,tex);
+
+            //push image to specific spot in the cube map.
+            for(let i=0; i < 6; i++){
+                this.texImage2D(this.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, this.RGBA, this.RGBA, this.UNSIGNED_BYTE, imgAry[i]);
+            }
+
+            this.texParameteri(this.TEXTURE_CUBE_MAP, this.TEXTURE_MAG_FILTER, this.LINEAR);	//Setup up scaling
+            this.texParameteri(this.TEXTURE_CUBE_MAP, this.TEXTURE_MIN_FILTER, this.LINEAR);	//Setup down scaling
+            this.texParameteri(this.TEXTURE_CUBE_MAP, this.TEXTURE_WRAP_S, this.CLAMP_TO_EDGE);	//Stretch image to X position
+            this.texParameteri(this.TEXTURE_CUBE_MAP, this.TEXTURE_WRAP_T, this.CLAMP_TO_EDGE);	//Stretch image to Y position
+            this.texParameteri(this.TEXTURE_CUBE_MAP, this.TEXTURE_WRAP_R, this.CLAMP_TO_EDGE);	//Stretch image to Z position
+            //this.generateMipmap(this.TEXTURE_CUBE_MAP);
+
+            this.bindTexture(this.TEXTURE_CUBE_MAP,null);
+            Bonsai.Res.Textures[name] = tex;
+            return tex;
+        };
+
+        //...................................................
+        //Setters - Getters
+
+        //Set the size of the canvas html element and the rendering view port
+        gl.fSetSize = function(w,h){
+            //set the size of the canvas, on chrome we need to set it 3 ways to make it work perfectly.
+            this.canvas.style.width = w + "px";
+            this.canvas.style.height = h + "px";
+            this.canvas.width = w;
+            this.canvas.height = h;
+
+            //when updating the canvas size, must reset the viewport of the canvas 
+            //else the resolution webgl renders at will not change
+            this.viewport(0,0,w,h);
+            this.fWidth = w;	//Need to save Width and Height to resize viewport for WebVR
+            this.fHeight = h;
+            return this;
+        }
+
+        //Set the size of the canvas to fill a % of the total screen.
+        gl.fFitScreen = function(wp,hp){ return this.fSetSize(window.innerWidth * (wp || 1),window.innerHeight * (hp || 1)); }
+
+        return Bonsai.gl = gl;
     }
 
     class Util{
+        static rgbArray(){
+            if(arguments.length == 0) return null;
+            let rtn = [];
+
+            for(let i=0,c,p; i < arguments.length; i++){
+                if(arguments[i].length < 6) continue;
+                c = arguments[i];		//Just an alias(copy really) of the color text, make code smaller.
+                p = (c[0] == "#")?1:0;	//Determine starting position in char array to start pulling from
+
+                rtn.push(
+                    parseInt(c[p]	+c[p+1],16)	/ 255.0,
+                    parseInt(c[p+2]	+c[p+3],16)	/ 255.0,
+                    parseInt(c[p+4]	+c[p+5],16)	/ 255.0
+                );
+            }
+            return rtn;
+        }
+
+        //Normalize x value to x range, then normalize to lerp the z range.
+        static map(x, xMin,xMax, zMin,zMax){ return (x - xMin) / (xMax - xMin) * (zMax-zMin) + zMin; }
+
+        static clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+
+        static smoothStep(edge1, edge2, val){ //https://en.wikipedia.org/wiki/Smoothstep
+            let x = Math.max(0, Math.min(1, (val-edge1)/(edge2-edge1)));
+            return x*x*(3-2*x);
+        }
 
     }
 
@@ -240,12 +389,6 @@ let Bonsai = (function(){
             )
         }
 
-
-
-        mag(){
-            return Math.sqrt(this[0]*this[0] + this[1]*this[1] + this[2]*this[2]);
-        }
-
     }
 
     class Quaternion extends Float32Array{
@@ -272,7 +415,7 @@ let Bonsai = (function(){
         //----------------------------------------------
         //region Static Methods
         static multi(out,a,b){
-            var ax = a[0], ay = a[1], az = a[2], aw = a[3],
+            let ax = a[0], ay = a[1], az = a[2], aw = a[3],
                 bx = b[0], by = b[1], bz = b[2], bw = b[3];
 
             out[0] = ax * bw + aw * bx + ay * bz - az * by;
@@ -283,7 +426,7 @@ let Bonsai = (function(){
         }
 
         static multiVec3(out,q,v){
-            var ax = q[0], ay = q[1], az = q[2], aw = q[3],
+            let ax = q[0], ay = q[1], az = q[2], aw = q[3],
                 bx = v[0], by = v[1], bz = v[2];
 
             out[0] = ax + aw * bx + ay * bz - az * by;
@@ -296,7 +439,7 @@ let Bonsai = (function(){
         static rotateX(out, a, rad){
             rad *= 0.5;
 
-            var ax = a[0], ay = a[1], az = a[2], aw = a[3],
+            let ax = a[0], ay = a[1], az = a[2], aw = a[3],
                 bx = Math.sin(rad), bw = Math.cos(rad);
 
             out[0] = ax * bw + aw * bx;
@@ -309,7 +452,7 @@ let Bonsai = (function(){
         static rotateY(out, a, rad) {
             rad *= 0.5;
 
-            var ax = a[0], ay = a[1], az = a[2], aw = a[3],
+            let ax = a[0], ay = a[1], az = a[2], aw = a[3],
                 by = Math.sin(rad), bw = Math.cos(rad);
 
             out[0] = ax * bw - az * by;
@@ -322,7 +465,7 @@ let Bonsai = (function(){
         static rotateZ(out, a, rad){
             rad *= 0.5;
 
-            var ax = a[0], ay = a[1], az = a[2], aw = a[3],
+            let ax = a[0], ay = a[1], az = a[2], aw = a[3],
                 bz = Math.sin(rad), bw = Math.cos(rad);
 
             out[0] = ax * bw + ay * bz;
@@ -334,7 +477,7 @@ let Bonsai = (function(){
 
         //https://github.com/mrdoob/three.js/blob/dev/src/math/Quaternion.js
         static setFromEuler(out,x,y,z,order){
-            var c1 = Math.cos(x/2),
+            let c1 = Math.cos(x/2),
                 c2 = Math.cos(y/2),
                 c3 = Math.cos(z/2),
                 s1 = Math.sin(x/2),
@@ -442,7 +585,7 @@ let Bonsai = (function(){
         }
 
         static perspective(out, fovy, aspect, near, far){
-            var f = 1.0 / Math.tan(fovy / 2),
+            let f = 1.0 / Math.tan(fovy / 2),
                 nf = 1 / (near - far);
             out[0] = f / aspect;
             out[1] = 0;
@@ -463,7 +606,7 @@ let Bonsai = (function(){
         }
 
         static ortho(out, left, right, bottom, top, near, far) {
-            var lr = 1 / (left - right),
+            let lr = 1 / (left - right),
                 bt = 1 / (bottom - top),
                 nf = 1 / (near - far);
             out[0] = -2 * lr;
@@ -488,7 +631,7 @@ let Bonsai = (function(){
         static transpose(out, a){
             //If we are transposing ourselves we can skip a few steps but have to cache some values
             if (out === a) {
-                var a01 = a[1], a02 = a[2], a03 = a[3], a12 = a[6], a13 = a[7], a23 = a[11];
+                let a01 = a[1], a02 = a[2], a03 = a[3], a12 = a[6], a13 = a[7], a23 = a[11];
                 out[1] = a[4];
                 out[2] = a[8];
                 out[3] = a[12];
@@ -525,7 +668,7 @@ let Bonsai = (function(){
 
         //Calculates a 3x3 normal matrix (transpose inverse) from the 4x4 matrix
         static normalMat3(out,a){
-            var a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3],
+            let a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3],
                 a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7],
                 a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11],
                 a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15],
@@ -567,7 +710,7 @@ let Bonsai = (function(){
         //New function derived from fromRotationTranslation, just took out the translation stuff.
         static fromQuaternion(out, q){
             // Quaternion math
-            var x = q[0], y = q[1], z = q[2], w = q[3],
+            let x = q[0], y = q[1], z = q[2], w = q[3],
                 x2 = x + x,
                 y2 = y + y,
                 z2 = z + z,
@@ -600,7 +743,7 @@ let Bonsai = (function(){
         //https://github.com/toji/gl-matrix/blob/master/src/gl-matrix/mat4.js
         static fromQuaternionTranslation(out, q, v){
             // Quaternion math
-            var x = q[0], y = q[1], z = q[2], w = q[3],
+            let x = q[0], y = q[1], z = q[2], w = q[3],
                 x2 = x + x,
                 y2 = y + y,
                 z2 = z + z,
@@ -636,7 +779,7 @@ let Bonsai = (function(){
 
         static fromQuaternionTranslationScale(out, q, v, s){
             // Quaternion math
-            var x = q[0], y = q[1], z = q[2], w = q[3],
+            let x = q[0], y = q[1], z = q[2], w = q[3],
                 x2 = x + x,
                 y2 = y + y,
                 z2 = z + z,
@@ -682,7 +825,7 @@ let Bonsai = (function(){
         }
 
         static getScaling(out, mat){
-            var m11 = mat[0],
+            let m11 = mat[0],
                 m12 = mat[1],
                 m13 = mat[2],
                 m21 = mat[4],
@@ -701,7 +844,7 @@ let Bonsai = (function(){
         //fromRotationTranslation, the returned quaternion will be the same as the quaternion originally supplied
         static getRotation(out, mat){
             // Algorithm taken from http://www.euclideanspace.com/maths/geometry/rotations/conversions/matrixToQuaternion/index.htm
-            var trace = mat[0] + mat[5] + mat[10],
+            let trace = mat[0] + mat[5] + mat[10],
                 S = 0;
 
             if(trace > 0){
@@ -737,8 +880,8 @@ let Bonsai = (function(){
 
         //https://github.com/gregtatum/mdn-model-view-projection/blob/master/shared/matrices.js
         static multiplyVector(mat4, v) {
-            var x = v[0], y = v[1], z = v[2], w = v[3];
-            var c1r1 = mat4[ 0], c2r1 = mat4[ 1], c3r1 = mat4[ 2], c4r1 = mat4[ 3],
+            let x = v[0], y = v[1], z = v[2], w = v[3];
+            let c1r1 = mat4[ 0], c2r1 = mat4[ 1], c3r1 = mat4[ 2], c4r1 = mat4[ 3],
                 c1r2 = mat4[ 4], c2r2 = mat4[ 5], c3r2 = mat4[ 6], c4r2 = mat4[ 7],
                 c1r3 = mat4[ 8], c2r3 = mat4[ 9], c3r3 = mat4[10], c4r3 = mat4[11],
                 c1r4 = mat4[12], c2r4 = mat4[13], c3r4 = mat4[14], c4r4 = mat4[15];
@@ -763,13 +906,13 @@ let Bonsai = (function(){
         //From glMatrix
         //Multiple two mat4 together
         static mult(out, a, b){
-            var a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3],
+            let a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3],
                 a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7],
                 a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11],
                 a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
 
             // Cache only the current line of the second matrix
-            var b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+            let b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
             out[0] = b0*a00 + b1*a10 + b2*a20 + b3*a30;
             out[1] = b0*a01 + b1*a11 + b2*a21 + b3*a31;
             out[2] = b0*a02 + b1*a12 + b2*a22 + b3*a32;
@@ -814,7 +957,7 @@ let Bonsai = (function(){
         };
 
         static rotateY(out,rad) {
-            var s = Math.sin(rad),
+            let s = Math.sin(rad),
                 c = Math.cos(rad),
                 a00 = out[0],
                 a01 = out[1],
@@ -838,7 +981,7 @@ let Bonsai = (function(){
         }
 
         static rotateX(out,rad) {
-            var s = Math.sin(rad),
+            let s = Math.sin(rad),
                 c = Math.cos(rad),
                 a10 = out[4],
                 a11 = out[5],
@@ -862,7 +1005,7 @@ let Bonsai = (function(){
         }
 
         static rotateZ(out,rad){
-            var s = Math.sin(rad),
+            let s = Math.sin(rad),
                 c = Math.cos(rad),
                 a00 = out[0],
                 a01 = out[1],
@@ -886,7 +1029,7 @@ let Bonsai = (function(){
         }
 
         static rotate(out, rad, axis){
-            var x = axis[0], y = axis[1], z = axis[2],
+            let x = axis[0], y = axis[1], z = axis[2],
                 len = Math.sqrt(x * x + y * y + z * z),
                 s, c, t,
                 a00, a01, a02, a03,
@@ -934,7 +1077,7 @@ let Bonsai = (function(){
         static invert(out,mat) {
             if(mat === undefined) mat = out; //If input isn't sent, then output is also input
 
-            var a00 = mat[0], a01 = mat[1], a02 = mat[2], a03 = mat[3],
+            let a00 = mat[0], a01 = mat[1], a02 = mat[2], a03 = mat[3],
                 a10 = mat[4], a11 = mat[5], a12 = mat[6], a13 = mat[7],
                 a20 = mat[8], a21 = mat[9], a22 = mat[10], a23 = mat[11],
                 a30 = mat[12], a31 = mat[13], a32 = mat[14], a33 = mat[15],
@@ -989,8 +1132,8 @@ let Bonsai = (function(){
     }
 
 
-    function newShader(name, vert, frag){
-        let shader = new ShaderBuilder(vert, farg);
+    function NewShader(name, vert, frag){
+        let shader = new ShaderBuilder(vert, frag);
         Bonsai.Res.Shaders[name] = shader;
         return shader;
     }
@@ -1021,7 +1164,7 @@ let Bonsai = (function(){
         constructor(gl, vs, fs){
             this.program = ShaderUtil.createProgram(gl, vs, fs, true);
             if(this.program !== null){
-                this.gl = gl;
+                gl = gl;
                 gl.useProgram(this.program);
                 this.mUniformList = [];
                 this.mTextureList = [];
@@ -1052,7 +1195,7 @@ let Bonsai = (function(){
 
         prepareUniformBlock(ubo, blockIndex){
             for(let i=0;  i<arguments.length; i+=2){
-                this.gl.uniformBlockBinding(this.program, arguments[i+1], arguments[i].blockPoint);
+                gl.uniformBlockBinding(this.program, arguments[i+1], arguments[i].blockPoint);
             }
             return this;
         }
@@ -1067,13 +1210,13 @@ let Bonsai = (function(){
                 tex = "";
 
             for(let i=0; i<arguments.length; i+=2){
-                tex = this.gl.mTextureCache[arguments[i+1]];
+                tex = gl.mTextureCache[arguments[i+1]];
                 if(tex === undefined){
                     console.log("Texture not found in cache " + arguments[i+1]);
                     continue;
                 }
 
-                loc = this.gl.getUniformLocation(this.program, arguments[i]);
+                loc = gl.getUniformLocation(this.program, arguments[i]);
                 if(loc != null){
                     this.mTextureList.push({
                         loc: loc,
@@ -1101,16 +1244,16 @@ let Bonsai = (function(){
 
                 switch (this.mUniformList[name].type){
                     case "2fv":
-                        this.gl.uniform2fv(this.mUniformList[name].loc, new Float32Array(arguments[i+1]));
+                        gl.uniform2fv(this.mUniformList[name].loc, new Float32Array(arguments[i+1]));
                         break;
                     case "3fv":
-                        this.gl.uniform3fv(this.mUniformList[name].loc, new Float32Array(arguments[i+1]));
+                        gl.uniform3fv(this.mUniformList[name].loc, new Float32Array(arguments[i+1]));
                         break;
                     case "4fv":
-                        this.gl.uniform4fv(this.mUniformList[name].loc, new Float32Array(arguments[i+1]));
+                        gl.uniform4fv(this.mUniformList[name].loc, new Float32Array(arguments[i+1]));
                         break;
                     case "mat4":
-                        this.gl.uniformMatrix4fv(this.mUniformList[name].loc, false, arguments[i+1]);
+                        gl.uniformMatrix4fv(this.mUniformList[name].loc, false, arguments[i+1]);
                         break;
                     default:
                         console.log("unknown uniform type for " + name);
@@ -1123,24 +1266,24 @@ let Bonsai = (function(){
         }
 
         activate(){
-            this.gl.useProgram(this.program);
+            gl.useProgram(this.program);
             return this;
         }
 
         deactivate(){
-            this.gl.useProgram(null);
+            gl.useProgram(null);
             return this;
         }
 
         dispose(){
-            if(this.gl.getParameter(this.gl.CURRENT_PROGRAM) === this.program){
-                this.gl.useProgram(null);
+            if(gl.getParameter(gl.CURRENT_PROGRAM) === this.program){
+                gl.useProgram(null);
             }
-            this.gl.deleteProgram(this.program);
+            gl.deleteProgram(this.program);
         }
 
         preRender(){
-            this.gl.useProgram(this.program);
+            gl.useProgram(this.program);
             if(arguments.length > 0){
                 this.setUniforms.apply(this, arguments);
             }
@@ -1148,10 +1291,10 @@ let Bonsai = (function(){
             if(this.mTextureList.length > 0){
                 let texSlot;
                 for(let i=0; i<this.mTextureList.length; i++){
-                    texSlot = this.gl["TEXTURE" + i];
-                    this.gl.activeTexture(texSlot);
-                    this.gl.bindTexture(this.gl.TEXTURE_2D, this.mTextureList[i].tex);
-                    this.gl.uniform1i(this.mTextureList[i].loc, i);
+                    texSlot = gl["TEXTURE" + i];
+                    gl.activeTexture(texSlot);
+                    gl.bindTexture(gl.TEXTURE_2D, this.mTextureList[i].tex);
+                    gl.uniform1i(this.mTextureList[i].loc, i);
                 }
             }
 
@@ -1160,27 +1303,27 @@ let Bonsai = (function(){
 
         renderModel(model, doShaderClose){
             this.setUniforms("uMVMatrix", model.transform.getViewMatrix());
-            this.gl.bindVertexArray(model.mesh.vao);
+            gl.bindVertexArray(model.mesh.vao);
 
             if(model.mesh.noCulling || this.noCulling){
-                this.gl.disable(this.gl.CULL_FACE);
+                gl.disable(gl.CULL_FACE);
             }
 
             if(model.mesh.doBlending || this.doBlending){
-                this.gl.enable(this.gl.BLEND);
+                gl.enable(gl.BLEND);
             }
 
             if(model.mesh.indexCount){
-                this.gl.drawElements(model.mesh.drawMode, model.mesh.indexCount, gl.UNSIGNED_SHORT, 0);
+                gl.drawElements(model.mesh.drawMode, model.mesh.indexCount, gl.UNSIGNED_SHORT, 0);
             }else{
-                this.gl.drawArrays(model.mesh.drawMode, 0, model.mesh.vertexCount);
+                gl.drawArrays(model.mesh.drawMode, 0, model.mesh.vertexCount);
             }
 
-            this.gl.bindVertexArray(null);
-            if(model.mesh.noCulling || this.noCulling) this.gl.enable(this.gl.CULL_FACE);
-            if(model.mesh.doBlending || this.doBlending) this.gl.disable(this.gl.BLEND);
+            gl.bindVertexArray(null);
+            if(model.mesh.noCulling || this.noCulling) gl.enable(gl.CULL_FACE);
+            if(model.mesh.doBlending || this.doBlending) gl.disable(gl.BLEND);
 
-            if(doShaderClose) this.gl.useProgram(null);
+            if(doShaderClose) gl.useProgram(null);
             return this;
 
         }
@@ -1256,7 +1399,7 @@ let Bonsai = (function(){
 
     class UBO {
 
-        constructor(gl, blockName, blockPoint, bufSize, aryCalc){
+        constructor(blockName, blockPoint, bufSize, aryCalc){
             this.items = [];
             this.keys = [];
 
@@ -1270,7 +1413,6 @@ let Bonsai = (function(){
                 this.keys[i] = aryCalc[i].name;
             }
 
-            this.gl = gl;
             this.blockName = blockName;
             this.blockPoint = blockPoint;
 
@@ -1290,16 +1432,22 @@ let Bonsai = (function(){
                 }
             }
 
-            this.gl.bindBuffer(this.gl.UNIFORM_BUFFER, this.buf);
-            this.gl.bufferSubData(this.gl.UNIFORM_BUFFER, this.items[name].offset, data, 0, null);
-            this.gl.bindBuffer(this.gl.UNIFORM_BUFFER, null);
+            gl.bindBuffer(gl.UNIFORM_BUFFER, this.buf);
+            gl.bufferSubData(gl.UNIFORM_BUFFER, this.items[name].offset, data, 0, null);
+            gl.bindBuffer(gl.UNIFORM_BUFFER, null);
             return this;
         }
 
-        static create(gl, blockName, blockPoint, ary){
-            let bufSize = UBO.calculate(ary);
-            UBO.Cache[blockName] = new UBO(gl, blockName, blockPoint, bufSize, ary);
-            UBO.debugVisualize(UBO.Cache[blockName])
+
+        static createTransformUBO(){
+            return UBO.create(Bonsai.UBO_TRANSFORM,0,[ {name:"matProjection",type:"mat4"}, {name:"matCameraView",type:"mat4"} ]);
+        }
+
+        static create(blockName,blockPoint,ary){
+            var bufSize = UBO.calculate(ary);
+            Bonsai.Res.Ubo[blockName] = new UBO(blockName,blockPoint,bufSize,ary);
+            UBO.debugVisualize(Bonsai.Res.Ubo[blockName]);
+            return Bonsai.Res.Ubo[blockName];
         }
 
         static getSize(type){
@@ -1481,11 +1629,102 @@ let Bonsai = (function(){
     }
 
     class RenderLoop{
+        constructor(callback,fps){
+            this.isActive		= false;	//Control the On/Off state of the render loop
+            this.fps			= 0;		//Save the value of how fast the loop is going.
 
+            this._lastFrame	= null;			//The time in Miliseconds of the last frame.
+            this._callBack		= callback;	//What function to call for each frame
+            this._frameCaller	= window;	//Normally we'll call window's requestAnimationFrame, but for VR we need to use its HMD reference for that call.
+            this._fpsLimit		= 0;		//Limit how many frames per second the loop should do.
+            this._runPtr 		= null;		//Pointer to a run function that has this class's scope attached
+
+            this.setFPSLimit( (fps != undefined && fps > 0)?fps:0  );
+        }
+
+        stop(){ this.isActive = false; }
+        start(){
+            this.isActive = true;
+            this._LastFrame = performance.now();
+            this._frameCaller.requestAnimationFrame(this._runPtr);
+            return this;
+        }
+
+        setFrameCaller(fc){ this.frameCaller = fc; return this; }
+        setFPSLimit(v){
+            if(v <= 0){
+                this._fpsLimit = 0;
+                this._runPtr = this.runFull.bind(this);
+            }else{
+                this._fpsLimit = 1000/v; //Calc how many milliseconds per frame in one second of time.
+                this._runPtr = this.runLimit.bind(this);
+            }
+        }
+
+        runLimit(){
+            //Calculate Deltatime between frames and the FPS currently.
+            let msCurrent	= performance.now(),
+                msDelta		= (msCurrent - this._lastFrame),
+                deltaTime	= msDelta / 1000.0;		//What fraction of a single second is the delta time
+
+            if(msDelta >= this._fpsLimit){ //Now execute frame since the time has elapsed.
+                this.fps		= Math.floor(1/deltaTime);
+                this._lastFrame	= msCurrent;
+                this._callBack(deltaTime);
+            }
+
+            if(this.isActive) this._frameCaller.requestAnimationFrame(this._runPtr);
+        }
+
+        runFull(){
+            //Calculate Deltatime between frames and the FPS currently.
+            let msCurrent	= performance.now(),	//Gives you the whole number of how many milliseconds since the dawn of time :)
+                deltaTime	= (msCurrent - this._lastFrame) / 1000.0;	//ms between frames, Then / by 1 second to get the fraction of a second.
+
+            //Now execute frame since the time has elapsed.
+            this.fps			= Math.floor(1/deltaTime); //Time it took to generate one frame, divide 1 by that to get how many frames in one second.
+            this._lastFrame		= msCurrent;
+            this._callBack(deltaTime);
+            if(this.isActive)	this._frameCaller.requestAnimationFrame(this._runPtr);
+        }
     }
 
     let Renderer = (function(){
+        let material = shader = null;
 
+        return function(ary){
+            for(let i=0; i < ary.length; i++){
+                if(ary[i].visible == false) continue;
+
+                //...................................
+                //Check if the next materal to use is different from the last
+                if(material !== ary[i].material){
+                    material = ary[i].material;
+
+                    //Multiple materials can share the same shader, if new shader, turn it on.
+                    if(material.shader !== shader) shader = material.shader.activate();
+
+                    //Turn on/off any gl features
+                    if(material.useCulling != CULLING_STATE)	gl[ ( (CULLING_STATE = (!CULLING_STATE))  )?"enable":"disable" ](gl.CULL_FACE);
+                    if(material.useBlending != BLENDING_STATE)	gl[ ( (BLENDING_STATE = (!BLENDING_STATE)) )?"enable":"disable" ](gl.BLEND);
+                }
+
+                //...................................
+                //Prepare Buffers and Uniforms.
+                gl.bindVertexArray(ary[i].vao.id);
+                if(material.useModelMatrix) material.shader.setUniforms(Bonsai.UNI_MODEL_MAT_NAME,ary[i].updateMatrix());
+                //(material.useNormalMatrix) 
+
+                //...................................
+                //Render !!!
+                if(ary[i].vao.isIndexed)	gl.drawElements(material.drawMode, ary[i].vao.count, gl.UNSIGNED_SHORT, 0);
+                else						gl.drawArrays(material.drawMode, 0, ary[i].vao.count);
+            }
+
+            //...................................
+            //Cleanup
+            gl.bindVertexArray(null); //After all done rendering, unbind VAO
+        }
     })();
 
     return {
@@ -1501,6 +1740,7 @@ let Bonsai = (function(){
             Vao: [],
             Material: []
         },
+        Shaders:{Material:Material, New:NewShader, Builder:ShaderBuilder, Util:ShaderUtil, VAO:VAO, UBO:UBO },
         Transform: Transform,
         Renderable: Renderable,
         CameraOrbit: CameraOrbit,
